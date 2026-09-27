@@ -1,0 +1,21 @@
+{
+    "name": "digitalkind/airworthy-dev",
+    "description": "Development tools for Airworthy (coding standards, tests). The plugin's own dependencies are in plugin/composer.json.",
+    "type": "project",
+    "license": "GPL-2.0-or-later",
+    "require-dev": {
+        "wp-coding-standards/wpcs": "^3.1",
+        "phpcompatibility/phpcompatibility-wp": "^2.1"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        },
+        "sort-packages": true
+    },
+    "scripts": {
+        "lint": "phpcs",
+        "fix": "phpcbf",
+        "build": "bin/build.sh"
+    }
+}

@@ -1,0 +1,8 @@
+/build/
+/dist/
+/tools/
+vendor/
+!/engine-test/fixtures/plugins/*/vendor/
+.DS_Store
+# Deliberately unreadable fixture (chmod 000); recreated by tests/run.sh
+/engine-test/fixtures/plugins/fx-unreadable/inc/secret.php

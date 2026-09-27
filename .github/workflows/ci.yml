@@ -1,0 +1,143 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  standards:
+    name: WordPress coding standards
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+      - run: vendor/bin/phpcs -q --report=full --report-summary
+
+
+  build:
+    name: Build release zip
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          coverage: none
+      - run: bin/build.sh
+      - name: Release build contains no development code
+        run: |
+          unzip -l dist/airworthy.zip | grep -q 'airworthy/src/Dev.php' && { echo "src/Dev.php is in the release zip"; exit 1; } || true
+          unzip -p dist/airworthy.zip airworthy/airworthy.php | grep -q "define( 'AIRWORTHY_VERSION', '[0-9]*\.[0-9]*\.[0-9]*' );"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: airworthy-zip
+          path: dist/airworthy.zip
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: airworthy-build
+          path: build/airworthy
+          if-no-files-found: error
+
+  plugin-check:
+    name: WordPress.org Plugin Check
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: airworthy-build
+          path: build/airworthy
+      - uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: build/airworthy
+          slug: airworthy
+
+  test:
+    name: PHP ${{ matrix.php }} · WP ${{ matrix.wp }}${{ matrix.multisite && ' · multisite' || '' }} · ${{ matrix.db || 'mysql:8.0' }}
+    needs: build
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.2', '7.4', '8.2', '8.5']
+        wp: ['6.5', 'latest']
+        exclude:
+          # WordPress 7.0+ requires PHP 7.4, so the latest WordPress can't run on PHP 7.2.
+          - php: '7.2'
+            wp: 'latest'
+        include:
+          # PHP 7.2's MySQL driver can't use MySQL 8's default login method; old hosts run MariaDB.
+          - php: '7.2'
+            wp: '6.5'
+            db: 'mariadb:10.6'
+          - php: '8.2'
+            wp: 'latest'
+            multisite: true
+    services:
+      database:
+        image: ${{ matrix.db || 'mysql:8.0' }}
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h 127.0.0.1 -proot" --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      WP_PATH: /tmp/wordpress
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mysqli, zip
+          ini-values: memory_limit=512M
+          tools: wp-cli
+          coverage: none
+      - uses: actions/download-artifact@v4
+        with:
+          name: airworthy-zip
+          path: dist
+
+      - name: Every PHP file in the release parses on PHP ${{ matrix.php }}
+        run: |
+          mkdir -p /tmp/lint && unzip -q dist/airworthy.zip -d /tmp/lint
+          find /tmp/lint/airworthy -name '*.php' -print0 | xargs -0 -n1 -P4 php -l > /tmp/lint.log 2>&1 || { grep -v '^No syntax errors' /tmp/lint.log; exit 1; }
+          echo "$(grep -c '^No syntax errors' /tmp/lint.log) files OK"
+
+      - name: Install WordPress ${{ matrix.wp }}
+        run: |
+          wp core download --version=${{ matrix.wp }} --path="$WP_PATH" --skip-content
+          wp config create --path="$WP_PATH" --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --skip-check
+          if [ "${{ matrix.multisite }}" = "true" ]; then
+            wp core multisite-install --path="$WP_PATH" --url=http://localhost --title=Test --admin_user=admin --admin_email=admin@example.com --admin_password="$(openssl rand -hex 16)" --skip-email
+          else
+            wp core install --path="$WP_PATH" --url=http://localhost --title=Test --admin_user=admin --admin_email=admin@example.com --admin_password="$(openssl rand -hex 16)" --skip-email
+          fi
+          mkdir -p "$WP_PATH/wp-content/plugins" "$WP_PATH/wp-content/themes"
+          wp theme install twentytwentyfour --path="$WP_PATH" --activate || true
+          wp --path="$WP_PATH" eval 'echo get_bloginfo("version"), " on PHP ", PHP_VERSION, "\n";'
+
+      - name: Install Airworthy from the release zip
+        run: |
+          if [ "${{ matrix.multisite }}" = "true" ]; then NET=--network; fi
+          wp plugin install dist/airworthy.zip --path="$WP_PATH" --activate${NET:+-network}
+          wp plugin list --path="$WP_PATH" --fields=name,status,version
+
+      - name: Tests
+        run: tests/run.sh "$WP_PATH" --uninstall

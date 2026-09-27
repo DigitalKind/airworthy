@@ -1,0 +1,27 @@
+{
+    "name": "digitalkind/airworthy",
+    "description": "Dependencies for Airworthy: the scan engine (scoped by bin/build.sh) and Action Scheduler (bundled unscoped; it deduplicates itself across plugins). Not loaded from here at runtime.",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "minimum-stability": "alpha",
+    "prefer-stable": true,
+    "require": {
+        "php": ">=7.2",
+        "phpcompatibility/php-compatibility": "10.0.0-alpha2",
+        "phpcompatibility/phpcompatibility-paragonie": "2.0.0-alpha2",
+        "phpcompatibility/phpcompatibility-wp": "3.0.0-alpha2",
+        "phpcsstandards/phpcsutils": "1.2.3",
+        "squizlabs/php_codesniffer": "4.0.4",
+        "woocommerce/action-scheduler": "3.9.3"
+    },
+    "config": {
+        "platform": {
+            "php": "7.2.5"
+        },
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": false
+        },
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+}

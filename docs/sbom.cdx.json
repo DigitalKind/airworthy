@@ -1,0 +1,222 @@
+{
+    "bomFormat": "CycloneDX",
+    "specVersion": "1.5",
+    "version": 1,
+    "metadata": {
+        "timestamp": "2026-09-27T17:39:50Z",
+        "component": {
+            "type": "application",
+            "bom-ref": "pkg:wordpress-plugin/airworthy@1.0.0",
+            "name": "airworthy",
+            "version": "1.0.0",
+            "description": "Airworthy – PHP Compatibility & Upgrade Checker (WordPress plugin)",
+            "licenses": [
+                {
+                    "license": {
+                        "id": "GPL-2.0-or-later"
+                    }
+                }
+            ],
+            "supplier": {
+                "name": "digitalkind.ie",
+                "url": [
+                    "https://digitalkind.ie"
+                ],
+                "contact": [
+                    {
+                        "email": "security@airworthywp.com"
+                    }
+                ]
+            },
+            "externalReferences": [
+                {
+                    "type": "website",
+                    "url": "https://airworthywp.com"
+                }
+            ]
+        }
+    },
+    "components": [
+        {
+            "type": "library",
+            "bom-ref": "pkg:composer/phpcompatibility/php-compatibility@10.0.0-alpha2",
+            "group": "phpcompatibility",
+            "name": "php-compatibility",
+            "version": "10.0.0-alpha2",
+            "licenses": [
+                {
+                    "license": {
+                        "id": "LGPL-3.0-or-later"
+                    }
+                }
+            ],
+            "purl": "pkg:composer/phpcompatibility/php-compatibility@10.0.0-alpha2",
+            "description": "A set of sniffs for PHP_CodeSniffer that checks for PHP cross-version compatibility.",
+            "externalReferences": [
+                {
+                    "type": "vcs",
+                    "url": "https://github.com/PHPCompatibility/PHPCompatibility.git",
+                    "comment": "Built from commit e0f0e5a3dc819a4a0f8d679a0f2453d941976e18"
+                }
+            ],
+            "properties": [
+                {
+                    "name": "airworthy:modification",
+                    "value": "Namespace-prefixed into Airworthy\\Vendor by PHP-Scoper (bin/build.sh)."
+                }
+            ]
+        },
+        {
+            "type": "library",
+            "bom-ref": "pkg:composer/phpcompatibility/phpcompatibility-paragonie@2.0.0-alpha2",
+            "group": "phpcompatibility",
+            "name": "phpcompatibility-paragonie",
+            "version": "2.0.0-alpha2",
+            "licenses": [
+                {
+                    "license": {
+                        "id": "LGPL-3.0-or-later"
+                    }
+                }
+            ],
+            "purl": "pkg:composer/phpcompatibility/phpcompatibility-paragonie@2.0.0-alpha2",
+            "description": "A set of rulesets for PHP_CodeSniffer to check for PHP cross-version compatibility issues in projects, while accounting for polyfills provided by the Paragonie polyfill libraries.",
+            "externalReferences": [
+                {
+                    "type": "vcs",
+                    "url": "https://github.com/PHPCompatibility/PHPCompatibilityParagonie.git",
+                    "comment": "Built from commit 7a979711c87d8202b52f56c56bd719d09d8ed7f5"
+                }
+            ],
+            "properties": [
+                {
+                    "name": "airworthy:modification",
+                    "value": "Namespace-prefixed into Airworthy\\Vendor by PHP-Scoper (bin/build.sh)."
+                }
+            ]
+        },
+        {
+            "type": "library",
+            "bom-ref": "pkg:composer/phpcompatibility/phpcompatibility-wp@3.0.0-alpha2",
+            "group": "phpcompatibility",
+            "name": "phpcompatibility-wp",
+            "version": "3.0.0-alpha2",
+            "licenses": [
+                {
+                    "license": {
+                        "id": "LGPL-3.0-or-later"
+                    }
+                }
+            ],
+            "purl": "pkg:composer/phpcompatibility/phpcompatibility-wp@3.0.0-alpha2",
+            "description": "A ruleset for PHP_CodeSniffer to check for PHP cross-version compatibility issues in projects, while accounting for polyfills provided by WordPress.",
+            "externalReferences": [
+                {
+                    "type": "vcs",
+                    "url": "https://github.com/PHPCompatibility/PHPCompatibilityWP.git",
+                    "comment": "Built from commit bd53f24e7528422ac51d64dc8d53e8d4c4a877b3"
+                }
+            ],
+            "properties": [
+                {
+                    "name": "airworthy:modification",
+                    "value": "Namespace-prefixed into Airworthy\\Vendor by PHP-Scoper (bin/build.sh)."
+                }
+            ]
+        },
+        {
+            "type": "library",
+            "bom-ref": "pkg:composer/phpcsstandards/phpcsutils@1.2.3",
+            "group": "phpcsstandards",
+            "name": "phpcsutils",
+            "version": "1.2.3",
+            "licenses": [
+                {
+                    "license": {
+                        "id": "LGPL-3.0-or-later"
+                    }
+                }
+            ],
+            "purl": "pkg:composer/phpcsstandards/phpcsutils@1.2.3",
+            "description": "A suite of utility functions for use with PHP_CodeSniffer",
+            "externalReferences": [
+                {
+                    "type": "vcs",
+                    "url": "https://github.com/PHPCSStandards/PHPCSUtils.git",
+                    "comment": "Built from commit 5f35d9408c54d7b529501f3c688b6eae562aea1f"
+                }
+            ],
+            "properties": [
+                {
+                    "name": "airworthy:modification",
+                    "value": "Namespace-prefixed into Airworthy\\Vendor by PHP-Scoper (bin/build.sh)."
+                }
+            ]
+        },
+        {
+            "type": "library",
+            "bom-ref": "pkg:composer/squizlabs/php_codesniffer@4.0.4",
+            "group": "squizlabs",
+            "name": "php_codesniffer",
+            "version": "4.0.4",
+            "licenses": [
+                {
+                    "license": {
+                        "id": "BSD-3-Clause"
+                    }
+                }
+            ],
+            "purl": "pkg:composer/squizlabs/php_codesniffer@4.0.4",
+            "description": "PHP_CodeSniffer tokenizes PHP files and detects violations of a defined set of coding standards.",
+            "externalReferences": [
+                {
+                    "type": "vcs",
+                    "url": "https://github.com/PHPCSStandards/PHP_CodeSniffer.git",
+                    "comment": "Built from commit bbdc3d0532623e21838b7041a4364383a8126f96"
+                }
+            ],
+            "properties": [
+                {
+                    "name": "airworthy:modification",
+                    "value": "Namespace-prefixed into Airworthy\\Vendor by PHP-Scoper (bin/build.sh)."
+                }
+            ]
+        },
+        {
+            "type": "library",
+            "bom-ref": "pkg:composer/woocommerce/action-scheduler@3.9.3",
+            "group": "woocommerce",
+            "name": "action-scheduler",
+            "version": "3.9.3",
+            "licenses": [
+                {
+                    "license": {
+                        "id": "GPL-3.0-or-later"
+                    }
+                }
+            ],
+            "purl": "pkg:composer/woocommerce/action-scheduler@3.9.3",
+            "description": "Action Scheduler for WordPress and WooCommerce",
+            "externalReferences": [
+                {
+                    "type": "vcs",
+                    "url": "https://github.com/woocommerce/action-scheduler.git",
+                    "comment": "Built from commit c58cdbab17651303d406cd3b22cf9d75c71c986c"
+                }
+            ]
+        }
+    ],
+    "dependencies": [
+        {
+            "ref": "pkg:wordpress-plugin/airworthy@1.0.0",
+            "dependsOn": [
+                "pkg:composer/phpcompatibility/php-compatibility@10.0.0-alpha2",
+                "pkg:composer/phpcompatibility/phpcompatibility-paragonie@2.0.0-alpha2",
+                "pkg:composer/phpcompatibility/phpcompatibility-wp@3.0.0-alpha2",
+                "pkg:composer/phpcsstandards/phpcsutils@1.2.3",
+                "pkg:composer/squizlabs/php_codesniffer@4.0.4",
+                "pkg:composer/woocommerce/action-scheduler@3.9.3"
+            ]
+        }
+    ]
+}

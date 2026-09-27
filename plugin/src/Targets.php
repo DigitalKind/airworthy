@@ -1,0 +1,109 @@
+<?php
+/**
+ * Supported target PHP versions.
+ *
+ * @package Airworthy
+ */
+
+namespace Airworthy;
+
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * The PHP versions a scan can check against. Scans always use one exact version, never a range.
+ */
+final class Targets {
+
+	/** Oldest first. */
+	const ALL = array( '8.0', '8.1', '8.2', '8.3', '8.4', '8.5' );
+
+	/**
+	 * Last day each PHP version gets security fixes (https://www.php.net/supported-versions.php
+	 * and https://www.php.net/eol.php). Update this table with each Airworthy release, and
+	 * add new PHP versions here and to ALL.
+	 */
+	const SECURITY_UNTIL = array(
+		'8.0' => '2023-11-26',
+		'8.1' => '2025-12-31',
+		'8.2' => '2026-12-31',
+		'8.3' => '2027-12-31',
+		'8.4' => '2028-12-31',
+		'8.5' => '2029-12-31',
+	);
+
+	/** When SECURITY_UNTIL was last checked against php.net. */
+	const TABLE_CHECKED = '2026-09-27';
+
+	/**
+	 * Whether a target is supported.
+	 *
+	 * @param string $target e.g. "8.4".
+	 * @return bool
+	 */
+	public static function is_valid( $target ) {
+		return in_array( $target, self::ALL, true );
+	}
+
+	/**
+	 * The default target: the oldest PHP version that still gets security fixes, so upgrading
+	 * to it buys the most time with the least change. Never the server's own version or
+	 * older (that would be a downgrade): then the next supported version above it. When the
+	 * table is out of date (nothing supported any more), simply the next version up.
+	 *
+	 * @param string   $current PHP version string, e.g. "7.4.33".
+	 * @param int|null $today   Timestamp (for tests); default now.
+	 * @return string
+	 */
+	public static function default_for( $current, $today = null ) {
+		$current_minor = self::minor( $current );
+		foreach ( self::ALL as $target ) {
+			if ( version_compare( $target, $current_minor, '>' ) && self::is_supported( $target, $today ) ) {
+				return $target;
+			}
+		}
+		foreach ( self::ALL as $target ) {
+			if ( version_compare( $target, $current_minor, '>' ) ) {
+				return $target;
+			}
+		}
+		return self::ALL[ count( self::ALL ) - 1 ];
+	}
+
+	/**
+	 * Whether a PHP version still gets security fixes. Versions older than the table have
+	 * long since ended; ones newer than it are assumed supported.
+	 *
+	 * @param string   $version e.g. "8.2" or "7.4.33".
+	 * @param int|null $today   Timestamp; default now.
+	 * @return bool
+	 */
+	public static function is_supported( $version, $today = null ) {
+		$until = self::security_until( $version );
+		if ( null === $until ) {
+			return version_compare( self::minor( $version ), self::ALL[0], '>' );
+		}
+		$today = null === $today ? time() : $today;
+		return gmdate( 'Y-m-d', $today ) <= $until;
+	}
+
+	/**
+	 * Last day of security fixes for a version, or null when it's not in the table.
+	 *
+	 * @param string $version e.g. "8.2" or "8.2.12".
+	 * @return string|null Y-m-d.
+	 */
+	public static function security_until( $version ) {
+		$minor = self::minor( $version );
+		return isset( self::SECURITY_UNTIL[ $minor ] ) ? self::SECURITY_UNTIL[ $minor ] : null;
+	}
+
+	/**
+	 * "8.1.27" -> "8.1".
+	 *
+	 * @param string $version Version.
+	 * @return string
+	 */
+	private static function minor( $version ) {
+		return implode( '.', array_slice( explode( '.', (string) $version ), 0, 2 ) );
+	}
+}

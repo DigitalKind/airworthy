@@ -1,0 +1,394 @@
+/* Airworthy: admin screen. Loaded on the plugin's own page only. */
+
+.airworthy-wrap .airworthy-lede {
+	max-width: 50rem;
+	font-size: 14px;
+}
+
+.airworthy-card {
+	max-width: 72rem;
+	margin-top: 16px;
+	padding: 16px 20px;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+	box-sizing: border-box;
+}
+
+.airworthy-card h2,
+.airworthy-card h3 {
+	margin-top: 0;
+}
+
+.airworthy-muted {
+	color: #646970;
+}
+
+.airworthy-small {
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+/* Start view. */
+
+.airworthy-facts {
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	gap: 6px 16px;
+	margin: 0 0 16px;
+}
+
+.airworthy-facts dt {
+	color: #50575e;
+}
+
+.airworthy-facts dd {
+	margin: 0;
+}
+
+.airworthy-start {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	padding-top: 16px;
+	border-top: 1px solid #f0f0f1;
+}
+
+.airworthy-start select {
+	max-width: 100%;
+}
+
+.airworthy-start .description,
+.airworthy-start .airworthy-note {
+	flex-basis: 100%;
+	margin: 0;
+}
+
+.airworthy-note {
+	padding: 8px 12px;
+	border-left: 4px solid #72aee6;
+	background: #f0f6fc;
+}
+
+.airworthy-note-warning {
+	border-left-color: #dba617;
+	background: #fcf9e8;
+}
+
+.airworthy-note-error {
+	border-left-color: #d63638;
+	background: #fcf0f1;
+}
+
+/* WordPress.org consent question (asked before the first scan, remembered after). */
+
+.airworthy-consent {
+	flex-basis: 100%;
+	margin: 0 0 8px;
+	padding: 12px 16px;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	background: #f6f7f7;
+}
+
+.airworthy-consent legend {
+	padding: 0 4px;
+	font-weight: 600;
+}
+
+.airworthy-consent .description {
+	margin: 0 0 8px;
+}
+
+.airworthy-consent label {
+	display: block;
+	margin: 4px 0;
+}
+
+/* Progress view. */
+
+.airworthy-progress-what {
+	margin: 4px 0 0;
+	color: #50575e;
+	max-width: 50rem;
+}
+
+.airworthy-checks ul {
+	margin: 0 0 12px;
+	padding-left: 18px;
+	list-style: disc;
+	max-width: 56rem;
+}
+
+.airworthy-checks li {
+	margin-bottom: 6px;
+}
+
+.airworthy-checks p {
+	margin: 0;
+}
+
+.airworthy-bar {
+	height: 10px;
+	margin: 12px 0 8px;
+	overflow: hidden;
+	background: #f0f0f1;
+	border-radius: 5px;
+}
+
+.airworthy-bar span {
+	display: block;
+	height: 100%;
+	background: #2271b1;
+	transition: width 0.4s ease;
+}
+
+.airworthy-progress-list {
+	columns: 2 20rem;
+	column-gap: 32px;
+	margin: 0;
+}
+
+.airworthy-progress-list li {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	break-inside: avoid;
+	padding: 3px 0;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+/* Results view. */
+
+.airworthy-results-head {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.airworthy-results-head p {
+	margin: 0;
+}
+
+.airworthy-head-actions {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+}
+
+.airworthy-summary {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+	gap: 8px;
+	margin: 16px 0;
+}
+
+.airworthy-summary li {
+	margin: 0;
+	padding: 10px 12px;
+	border: 1px solid #dcdcde;
+	border-top-width: 4px;
+	border-radius: 2px;
+}
+
+.airworthy-summary-count {
+	display: block;
+	font-size: 24px;
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.airworthy-summary-label {
+	font-size: 12px;
+	color: #50575e;
+}
+
+.airworthy-summary-blocker { border-top-color: #d63638; }
+.airworthy-summary-unknown { border-top-color: #8c8f94; }
+.airworthy-summary-suppressed { border-top-color: #dba617; }
+.airworthy-summary-guarded { border-top-color: #72aee6; }
+.airworthy-summary-warnings { border-top-color: #f0c33c; }
+.airworthy-summary-ready { border-top-color: #00a32a; }
+
+.airworthy-honest {
+	margin: 0;
+	color: #50575e;
+	font-style: italic;
+}
+
+.airworthy-closed-card {
+	border-left: 4px solid #d63638;
+}
+
+.airworthy-closed-card ul {
+	margin: 0;
+	list-style: disc;
+	padding-left: 20px;
+}
+
+.airworthy-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 8px;
+	max-width: 72rem;
+	margin: 20px 0 8px;
+}
+
+.airworthy-table {
+	max-width: 72rem;
+}
+
+.airworthy-table td {
+	vertical-align: top;
+}
+
+.airworthy-actions {
+	white-space: nowrap;
+	text-align: right;
+}
+
+.airworthy-badge {
+	display: inline-block;
+	padding: 1px 8px;
+	border-radius: 10px;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1.7;
+	background: #f0f0f1;
+	color: #1d2327;
+}
+
+.airworthy-verdict-blocker { background: #fcf0f1; color: #8a2424; box-shadow: inset 0 0 0 1px #f1adad; }
+.airworthy-verdict-unknown { background: #f0f0f1; color: #3c434a; box-shadow: inset 0 0 0 1px #c3c4c7; }
+.airworthy-verdict-suppressed { background: #fcf9e8; color: #6e4f00; box-shadow: inset 0 0 0 1px #f2d675; }
+.airworthy-verdict-guarded { background: #f0f6fc; color: #0a4b78; box-shadow: inset 0 0 0 1px #9ec2e6; }
+.airworthy-verdict-warnings { background: #fef8ee; color: #6e4f00; box-shadow: inset 0 0 0 1px #f5e6ab; }
+.airworthy-verdict-ready { background: #edfaef; color: #005c12; box-shadow: inset 0 0 0 1px #68de7c; }
+
+.airworthy-closed,
+.airworthy-flag {
+	margin: 0 4px 4px 0;
+	background: #fcf0f1;
+	color: #8a2424;
+	box-shadow: inset 0 0 0 1px #f1adad;
+}
+
+.airworthy-warn {
+	color: #996800;
+}
+
+.airworthy-update {
+	color: #2271b1;
+}
+
+.airworthy-details td {
+	background: #f6f7f7;
+}
+
+.airworthy-issues {
+	margin: 0;
+}
+
+.airworthy-issue {
+	display: grid;
+	grid-template-columns: 10rem minmax(14rem, 26rem) 1fr;
+	gap: 4px 12px;
+	margin: 0;
+	padding: 6px 0;
+	border-bottom: 1px solid #dcdcde;
+	font-size: 12px;
+}
+
+.airworthy-sev {
+	font-weight: 600;
+}
+
+.airworthy-sev-error .airworthy-sev { color: #b32d2e; }
+.airworthy-sev-scan .airworthy-sev { color: #3c434a; }
+.airworthy-sev-warning .airworthy-sev { color: #996800; }
+.airworthy-sev-notice .airworthy-sev,
+.airworthy-ctx-guarded .airworthy-sev,
+.airworthy-ctx-suppressed .airworthy-sev { color: #646970; font-weight: 400; }
+
+.airworthy-line {
+	white-space: nowrap;
+}
+
+.airworthy-loc {
+	overflow-wrap: break-word;
+	background: none;
+	padding: 0;
+}
+
+.airworthy-more {
+	margin-top: 8px;
+}
+
+.airworthy-unchecked-card {
+	border-left: 4px solid #8c8f94;
+}
+
+.airworthy-unchecked-table {
+	margin-top: 8px;
+}
+
+/* Headings receive focus when the view changes: keep the focus visible. */
+.airworthy-wrap h2[tabindex="-1"]:focus {
+	outline: 2px solid #2271b1;
+	outline-offset: 4px;
+}
+
+/* Phones: stack the table and the findings. */
+@media screen and (max-width: 782px) {
+	.airworthy-table thead,
+	.airworthy-unchecked-table thead {
+		display: none;
+	}
+
+	.airworthy-unchecked-table tr,
+	.airworthy-unchecked-table td {
+		display: block;
+		width: auto;
+	}
+
+	.airworthy-unchecked-table td[data-label]::before {
+		content: attr(data-label);
+		display: block;
+		font-size: 11px;
+		text-transform: uppercase;
+		color: #646970;
+	}
+
+	.airworthy-table tr.airworthy-row,
+	.airworthy-table tr.airworthy-row td {
+		display: block;
+		width: auto;
+	}
+
+	.airworthy-table tr.airworthy-row td {
+		padding: 6px 12px;
+	}
+
+	.airworthy-table tr.airworthy-row td[data-label]::before {
+		content: attr(data-label);
+		display: block;
+		font-size: 11px;
+		text-transform: uppercase;
+		color: #646970;
+	}
+
+	.airworthy-actions {
+		text-align: left;
+	}
+
+	.airworthy-issue {
+		grid-template-columns: 1fr;
+	}
+
+	.airworthy-facts {
+		grid-template-columns: 1fr;
+	}
+}

@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<ruleset name="Airworthy">
+	<description>WordPress coding standards for Airworthy's own code (not the bundled libraries).</description>
+
+	<file>plugin/airworthy.php</file>
+	<file>plugin/uninstall.php</file>
+	<file>plugin/src</file>
+	<file>plugin/assets/admin.js</file>
+
+	<arg name="extensions" value="php,js"/>
+	<arg name="colors"/>
+	<arg value="sp"/>
+
+	<config name="minimum_wp_version" value="6.5"/>
+	<config name="testVersion" value="7.2-"/>
+
+	<rule ref="WordPress"/>
+	<rule ref="PHPCompatibilityWP"/>
+
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="airworthy"/>
+			</property>
+		</properties>
+	</rule>
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="airworthy"/>
+				<element value="Airworthy"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- PSR-4 style class files (src/Scan/Queue.php), not class-queue.php. -->
+	<rule ref="WordPress.Files.FileName">
+		<exclude name="WordPress.Files.FileName.InvalidClassFileName"/>
+		<exclude name="WordPress.Files.FileName.NotHyphenatedLowercase"/>
+	</rule>
+</ruleset>
