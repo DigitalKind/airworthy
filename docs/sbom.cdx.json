@@ -3,7 +3,7 @@
     "specVersion": "1.5",
     "version": 1,
     "metadata": {
-        "timestamp": "2026-09-29T13:08:59Z",
+        "timestamp": "2026-09-29T21:15:47Z",
         "component": {
             "type": "application",
             "bom-ref": "pkg:wordpress-plugin/airworthy@1.0.0",
@@ -184,10 +184,10 @@
         },
         {
             "type": "library",
-            "bom-ref": "pkg:composer/woocommerce/action-scheduler@3.9.3",
+            "bom-ref": "pkg:composer/woocommerce/action-scheduler@4.2.0",
             "group": "woocommerce",
             "name": "action-scheduler",
-            "version": "3.9.3",
+            "version": "4.2.0",
             "licenses": [
                 {
                     "license": {
@@ -195,13 +195,13 @@
                     }
                 }
             ],
-            "purl": "pkg:composer/woocommerce/action-scheduler@3.9.3",
+            "purl": "pkg:composer/woocommerce/action-scheduler@4.2.0",
             "description": "Action Scheduler for WordPress and WooCommerce",
             "externalReferences": [
                 {
                     "type": "vcs",
                     "url": "https://github.com/woocommerce/action-scheduler.git",
-                    "comment": "Built from commit c58cdbab17651303d406cd3b22cf9d75c71c986c"
+                    "comment": "Built from commit 9e2c6b02e89652bade4445ea2ca5fb12e0fa7242"
                 }
             ]
         }
@@ -215,7 +215,7 @@
                 "pkg:composer/phpcompatibility/phpcompatibility-wp@3.0.0-alpha2",
                 "pkg:composer/phpcsstandards/phpcsutils@1.2.3",
                 "pkg:composer/squizlabs/php_codesniffer@4.0.4",
-                "pkg:composer/woocommerce/action-scheduler@3.9.3"
+                "pkg:composer/woocommerce/action-scheduler@4.2.0"
             ]
         }
     ]

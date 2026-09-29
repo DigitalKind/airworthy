@@ -41,7 +41,7 @@ vendor/bin/phpcs          # 0 errors, 0 warnings
 tests/run.sh /path/to/wordpress --uninstall
 ```
 
-`tests/run.sh` runs against a throwaway WordPress site with the built plugin installed; see `tests/README.md`. The GitHub Actions workflow runs it on PHP 7.2, 7.4, 8.2 and 8.5 against WordPress 6.5 and the latest release, plus multisite and WordPress.org Plugin Check.
+`tests/run.sh` runs against a throwaway WordPress site with the built plugin installed; see `tests/README.md`. The GitHub Actions workflow runs it on PHP 7.2, 7.4, 8.2 and 8.5 against WordPress 6.9 and the latest release, plus multisite and WordPress.org Plugin Check.
 
 ## Security
 

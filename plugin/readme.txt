@@ -1,7 +1,7 @@
 === Airworthy ===
-Contributors: airworthywp
+Contributors: digitalkind, airworthywp
 Tags: php, compatibility, upgrade, php 8, health check
-Requires at least: 6.5
+Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.2
 Stable tag: 1.0.0

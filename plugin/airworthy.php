@@ -4,7 +4,7 @@
  * Plugin URI:        https://airworthywp.com
  * Description:       Before you upgrade PHP, see which plugins and themes are ready, which need fixing, and which look abandoned.
  * Version:           1.0.0
- * Requires at least: 6.5
+ * Requires at least: 6.9
  * Requires PHP:      7.2
  * Author:            digitalkind.ie
  * Author URI:        https://digitalkind.ie

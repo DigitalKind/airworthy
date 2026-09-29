@@ -2,7 +2,7 @@
 
 `tests/run.sh <path to WordPress> [--uninstall]` runs Airworthy's integration tests against a real
 WordPress install that has Airworthy installed. GitHub Actions (`.github/workflows/ci.yml`) runs it
-on PHP 7.2, 7.4, 8.2 and 8.5 against WordPress 6.5 and the latest release, on MySQL 8.0 (MariaDB
+on PHP 7.2, 7.4, 8.2 and 8.5 against WordPress 6.9 and the latest release, on MySQL 8.0 (MariaDB
 10.6 for PHP 7.2), plus a multisite run. Each run installs the release zip built by `bin/build.sh`.
 
 What it checks:
