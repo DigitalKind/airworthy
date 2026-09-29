@@ -16,11 +16,30 @@ defined( 'ABSPATH' ) || exit;
 final class Components {
 
 	/**
-	 * Lists components to scan.
+	 * What the site's settings left out of the last discover() call, for the scan's record.
 	 *
+	 * @var array{inactive:int,ignored:int}
+	 */
+	public static $last_skipped = array(
+		'inactive' => 0,
+		'ignored'  => 0,
+	);
+
+	/**
+	 * When true, discover() ignores the site's settings (WP-CLI's --only, rescans).
+	 *
+	 * @var bool
+	 */
+	public static $bypass_settings = false;
+
+	/**
+	 * Lists components to scan, applying the site's settings (skip inactive plugins, ignore
+	 * list) unless $apply_settings is false or $bypass_settings is set.
+	 *
+	 * @param bool $apply_settings Whether to apply the settings.
 	 * @return array<int,array{type:string,slug:string,name:string,version:string,rel_path:string,is_active:bool}>
 	 */
-	public static function discover() {
+	public static function discover( $apply_settings = true ) {
 		if ( ! function_exists( 'get_plugins' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		}
@@ -35,7 +54,7 @@ final class Components {
 				'name'      => (string) $data['Name'],
 				'version'   => (string) $data['Version'],
 				'rel_path'  => $is_single ? $file : dirname( $file ),
-				'is_active' => is_plugin_active( $file ) || ( is_multisite() && is_plugin_active_for_network( $file ) ),
+				'is_active' => self::is_active_anywhere( $file ),
 			);
 		}
 
@@ -61,12 +80,68 @@ final class Components {
 			}
 		}
 
+		self::$last_skipped = array(
+			'inactive' => 0,
+			'ignored'  => 0,
+		);
+		if ( $apply_settings && ! self::$bypass_settings ) {
+			$settings = \Airworthy\Settings::all();
+			$out      = array_filter(
+				$out,
+				static function ( $c ) use ( $settings ) {
+					if ( in_array( $c['type'] . ':' . $c['slug'], $settings['ignore'], true ) ) {
+						++self::$last_skipped['ignored'];
+						return false;
+					}
+					if ( $settings['skip_inactive'] && 'plugin' === $c['type'] && ! $c['is_active'] ) {
+						++self::$last_skipped['inactive'];
+						return false;
+					}
+					return true;
+				}
+			);
+		}
+
 		/**
 		 * Filters the plugins and themes a new scan covers.
 		 *
 		 * @param array $components Component rows (type, slug, name, version, rel_path, is_active).
 		 */
 		return array_values( (array) apply_filters( 'airworthy_scan_components', $out ) );
+	}
+
+	/**
+	 * Whether a plugin is active: on this site, network-wide, or (multisite) on any site of
+	 * the network, since the network admin sees every site's plugins.
+	 *
+	 * @param string $file Plugin file, e.g. "akismet/akismet.php".
+	 * @return bool
+	 */
+	private static function is_active_anywhere( $file ) {
+		if ( is_plugin_active( $file ) ) {
+			return true;
+		}
+		if ( ! is_multisite() ) {
+			return false;
+		}
+		if ( is_plugin_active_for_network( $file ) ) {
+			return true;
+		}
+		static $active = null;
+		if ( null === $active ) {
+			$active = array();
+			foreach ( get_sites(
+				array(
+					'number' => 1000,
+					'fields' => 'ids',
+				)
+			) as $site_id ) {
+				foreach ( (array) get_blog_option( $site_id, 'active_plugins', array() ) as $plugin ) {
+					$active[ $plugin ] = true;
+				}
+			}
+		}
+		return isset( $active[ $file ] );
 	}
 
 	/**

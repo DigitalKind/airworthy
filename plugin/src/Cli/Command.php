@@ -9,6 +9,7 @@ namespace Airworthy\Cli;
 
 use Airworthy\Admin\Export;
 use Airworthy\Installer;
+use Airworthy\Scan\Components;
 use Airworthy\Scan\Queue;
 use Airworthy\Scan\Verdict;
 use Airworthy\Targets;
@@ -19,7 +20,7 @@ use WP_CLI\Utils;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Checks which plugins and themes will break on a newer PHP version, from the terminal.
+ * Checks which plugins and themes are ready for a newer PHP version, from the terminal.
  *
  * Uses the same scanner, verdicts and results as the admin screen (Tools > Airworthy), so both
  * always agree. Scans run in this process, without the web's time limits, unless --background
@@ -75,6 +76,9 @@ final class Command {
 	 *   - warnings
 	 * ---
 	 *
+	 * [--from=<version>]
+	 * : PHP version the site upgrades from, e.g. 7.4. Problems from PHP changes up to that version already apply today, so they aren't Blockers. Default: this server's PHP version.
+	 *
 	 * [--[no-]wporg]
 	 * : Also look plugins up on WordPress.org (closed, abandoned, Requires PHP), which sends their folder names to api.wordpress.org. Default: the choice saved on the admin screen; off if nobody has chosen yet.
 	 *
@@ -113,6 +117,7 @@ final class Command {
 
 		$only = isset( $assoc_args['only'] ) ? array_filter( array_map( 'trim', explode( ',', (string) $assoc_args['only'] ) ) ) : array();
 		if ( $only ) {
+			Components::$bypass_settings = true; // --only scans exactly what it names.
 			add_filter(
 				'airworthy_scan_components',
 				static function ( $components ) use ( $only ) {
@@ -132,7 +137,12 @@ final class Command {
 			WP_CLI::log( 'WordPress.org checks are off for this scan (add --wporg to include them).' );
 		}
 
-		$scan_id = Queue::start( $target, 0, $wporg );
+		$from = isset( $assoc_args['from'] ) ? (string) $assoc_args['from'] : null;
+		if ( null !== $from && ! Targets::is_valid_from( $from ) ) {
+			WP_CLI::error( sprintf( 'Unsupported --from "%s". Use a PHP version such as 7.4 or 8.3.', $from ) );
+		}
+
+		$scan_id = Queue::start( $target, 0, $wporg, $from );
 		if ( is_wp_error( $scan_id ) ) {
 			WP_CLI::error( $scan_id->get_error_message() );
 		}
@@ -145,7 +155,7 @@ final class Command {
 			return;
 		}
 
-		WP_CLI::log( sprintf( 'Checking against PHP %s…', $target ) );
+		WP_CLI::log( sprintf( 'Checking against PHP %1$s, upgrading from PHP %2$s…', $target, null !== $from ? $from : Targets::minor( \Airworthy\Env::php_version() ) ) );
 		$this->run_to_completion( $scan_id );
 		if ( $only && ! $this->components( $scan_id ) ) {
 			WP_CLI::warning( sprintf( 'None of these are installed: %s.', implode( ', ', $only ) ) );
@@ -166,7 +176,7 @@ final class Command {
 	 * : Only these verdicts, comma-separated: blocker, unknown, suppressed, guarded, warnings, ready.
 	 *
 	 * [--fields=<fields>]
-	 * : Columns to show. Default: name,slug,version,verdict,errors,suppressed,guarded,warnings,wporg. Also available: type, active, files, last_updated, tested, requires_php, update, closed.
+	 * : Columns to show. Default: name,slug,version,verdict,errors,suppressed,guarded,warnings,wporg. Also available: type, active, existing (problems that already apply on the PHP version compared from), files, last_updated, tested, requires_php, update, closed.
 	 *
 	 * [--format=<format>]
 	 * : Output format.
@@ -270,6 +280,37 @@ final class Command {
 		}
 		Queue::cancel( $id );
 		WP_CLI::success( sprintf( 'Scan %d stopped.', $id ) );
+	}
+
+	/**
+	 * Continues the latest scan after it was stopped, from where it stopped.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--format=<format>]
+	 * : Output format for the results.
+	 * ---
+	 * default: table
+	 * options:
+	 *   - table
+	 *   - json
+	 *   - csv
+	 *   - yaml
+	 *   - summary
+	 * ---
+	 *
+	 * @param array $args       Positional arguments.
+	 * @param array $assoc_args Options.
+	 */
+	public function resume( $args, $assoc_args ) {
+		$scan_id = $this->scan_id( array() );
+		$result  = Queue::resume( $scan_id );
+		if ( is_wp_error( $result ) ) {
+			WP_CLI::error( $result->get_error_message() );
+		}
+		WP_CLI::log( sprintf( 'Continuing scan %d.', $scan_id ) );
+		$this->run_to_completion( $scan_id );
+		$this->print_results( $scan_id, $assoc_args );
 	}
 
 	/**
@@ -490,6 +531,10 @@ final class Command {
 				WP_CLI::warning( sprintf( '%1$s was removed from WordPress.org (%2$s). No more updates will come.', $r['name'], $r['closed'] ) );
 			}
 			WP_CLI::log( $summary );
+			$existing = array_sum( wp_list_pluck( $this->components( $scan_id ), 'existing' ) );
+			if ( $existing && ! empty( $scan->from_php ) ) {
+				WP_CLI::log( sprintf( '%1$d problems already apply on PHP %2$s, so they are not caused by this upgrade (see the "existing" column).', $existing, $scan->from_php ) );
+			}
 			if ( in_array( $scan->wporg_status, array( 'offline', 'partial' ), true ) ) {
 				WP_CLI::warning( 'WordPress.org could not be reached for some plugins; their maintenance details are missing.' );
 			}
@@ -537,6 +582,7 @@ final class Command {
 				'errors'       => (int) $c->errors,
 				'suppressed'   => (int) $c->suppressed,
 				'guarded'      => (int) $c->guarded,
+				'existing'     => (int) $c->existing,
 				'warnings'     => (int) $c->warnings,
 				'files'        => sprintf( '%d/%d', (int) $c->files_done, (int) $c->files_total ),
 				'wporg'        => $w ? ( $flags ? implode( ', ', $flags ) : 'ok' ) : '-',

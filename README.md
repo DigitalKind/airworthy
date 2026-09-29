@@ -1,6 +1,6 @@
 # Airworthy – PHP Compatibility & Upgrade Checker
 
-A WordPress plugin that finds out which plugins and themes will break on a newer PHP version (8.0 to 8.5), and which look abandoned, before you upgrade.
+A WordPress plugin that shows, before you upgrade PHP (8.0 to 8.5), which plugins and themes are ready, which need fixing, and which look abandoned.
 
 - Website and docs: https://airworthywp.com
 - WordPress.org: https://wordpress.org/plugins/airworthy/

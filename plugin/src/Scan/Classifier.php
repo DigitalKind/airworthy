@@ -53,6 +53,18 @@ final class Classifier {
 	const ENGINE_LIBRARIES = '#(^|/)(phpseclib|symfony/polyfill-[^/]+|paragonie/(random_compat|sodium_compat))/#i';
 
 	/** Capability checks and the argument position holding the name they check. */
+	/**
+	 * Removed extensions and the extension that replaced each. A check for any function of a
+	 * removed extension covers its other functions and constants too; and code that only runs
+	 * when the replacement is missing (`if ( extension_loaded( 'openssl' ) ) { …; return; }`
+	 * then mcrypt code) is a fallback that never runs where the replacement exists, as it
+	 * does on practically every server WordPress runs on.
+	 */
+	const REMOVED_EXTENSIONS = array(
+		'mcrypt' => 'openssl',
+		'mysql'  => 'mysqli',
+	);
+
 	const CAPABILITY_CHECKS = array(
 		'function_exists'  => 0,
 		'is_callable'      => 0,
@@ -392,8 +404,13 @@ final class Classifier {
 		if ( preg_match( '/^([a-z_]+)\((.*)\)$/i', $text, $m ) && isset( self::CAPABILITY_CHECKS[ strtolower( $m[1] ) ] ) ) {
 			$args = array_map( 'trim', explode( ',', $m[2] ) );
 			$pos  = self::CAPABILITY_CHECKS[ strtolower( $m[1] ) ];
-			if ( isset( $args[ $pos ] ) && preg_match( "/^'([^']+)'$/", $args[ $pos ], $name ) && self::names_match( strtolower( $name[1] ), $subjects ) ) {
-				return ! $removed;
+			if ( isset( $args[ $pos ] ) && preg_match( "/^'([^']+)'$/", $args[ $pos ], $name ) ) {
+				if ( self::names_match( strtolower( $name[1] ), $subjects ) ) {
+					return ! $removed;
+				}
+				if ( $removed && self::is_replacement( strtolower( $name[1] ), $subjects ) ) {
+					return true; // The replacement extension is there: the removed one's fallback never runs.
+				}
 			}
 			return null;
 		}
@@ -658,11 +675,54 @@ final class Classifier {
 	 * @return bool
 	 */
 	private static function names_match( $checked, array $subjects ) {
+		$family = self::removed_extension( $checked );
 		foreach ( $subjects as $subject ) {
+			if ( null !== $family && self::removed_extension( $subject ) === $family ) {
+				return true; // function_exists( 'mcrypt_encrypt' ) covers MCRYPT_* and the extension.
+			}
 			$prefix = rtrim( $subject, '_' );
 			if ( $checked === $subject || $checked === $prefix
 				|| 0 === strpos( $subject, $checked . '_' )
 				|| ( '_' === substr( $subject, -1 ) && 0 === strpos( $checked, $subject ) ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * The removed extension a name belongs to ("mcrypt" for mcrypt_encrypt, MCRYPT_RAND or
+	 * "mcrypt" itself; not "mysqli_query"), or null.
+	 *
+	 * @param string $name Lowercase name.
+	 * @return string|null
+	 */
+	private static function removed_extension( $name ) {
+		$name = rtrim( $name, '_' );
+		foreach ( array_keys( self::REMOVED_EXTENSIONS ) as $extension ) {
+			if ( $name === $extension || 0 === strpos( $name, $extension . '_' ) ) {
+				return $extension;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Whether a checked name is (a function of) the extension that replaced the removed
+	 * extension the finding is about: extension_loaded( 'openssl' ) for mcrypt code.
+	 *
+	 * @param string $checked  Name in the capability check (lowercase).
+	 * @param array  $subjects Finding subjects.
+	 * @return bool
+	 */
+	private static function is_replacement( $checked, array $subjects ) {
+		foreach ( $subjects as $subject ) {
+			$family = self::removed_extension( $subject );
+			if ( null === $family ) {
+				continue;
+			}
+			$replacement = self::REMOVED_EXTENSIONS[ $family ];
+			if ( $checked === $replacement || 0 === strpos( $checked, $replacement . '_' ) ) {
 				return true;
 			}
 		}

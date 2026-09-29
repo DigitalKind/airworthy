@@ -1,5 +1,5 @@
-=== Airworthy – PHP Compatibility & Upgrade Checker ===
-Contributors: digitalkind
+=== Airworthy ===
+Contributors: airworthywp
 Tags: php, compatibility, upgrade, php 8, health check
 Requires at least: 6.5
 Tested up to: 7.1
@@ -8,7 +8,7 @@ Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Find out which plugins and themes will break on a newer PHP version, and which look abandoned, before you upgrade.
+Before you upgrade PHP, see which plugins and themes are ready, which need fixing, and which look abandoned.
 
 == Description ==
 
@@ -16,14 +16,20 @@ Your host wants you on a newer PHP version. Will your site survive the switch?
 
 Airworthy reads the code of every installed plugin and of your theme (on multisite: every network-enabled theme) and checks it against the PHP version you pick, from PHP 8.0 to PHP 8.5. It also looks each plugin up on WordPress.org to see whether it is still maintained. You get one clear verdict per plugin and theme, before you touch your server settings.
 
+**Important:** Airworthy helps you plan a PHP upgrade; it doesn't guarantee one. Always back up your site and test the new PHP version on a staging copy before changing your live site.
+
 = What you get =
 
 * **A verdict for every plugin and theme.** Blocker, Unknown, Suppressed, Guarded, Warnings or Ready, each with one plain sentence explaining what it means for you.
 * **Fewer false alarms.** Many plugins carry old code that only runs on old PHP versions, behind a version check. Airworthy recognises those checks and marks that code as guarded instead of broken. In our test of the 30 most popular plugins, this cut the plugins flagged as broken from 4 to 2, and in both the flagged code really would fail on PHP 8.
 * **Maintenance signals from WordPress.org (if you allow it).** Plugins that were closed (removed from the directory), not updated in two years, not tested with recent WordPress versions, or that need a newer PHP version than you picked are called out.
+* **Know what to do next.** Results are grouped into fix before you upgrade, keep an eye on, and all good. Plugins with an update waiting say so, with a one-click update, and Airworthy checks them again once they're updated.
+* **Know how long you have.** Airworthy shows when your server's PHP version stops getting security fixes, so you can plan the upgrade before it's urgent.
 * **The details when you want them.** Every finding shows the file, the line and what changed in PHP. Filter by verdict, rescan one plugin after an update, or download everything as a CSV file for your developer or host.
 * **Sensible default.** Airworthy recommends the oldest PHP version that still gets security fixes: the smallest upgrade that keeps your site protected. It shows every version's support dates.
 * **Safe on any host.** Scans run in the background in short batches, so they never time out, and they watch memory use. You can leave the page while a scan runs. Nothing is changed on your site.
+* **Settings that fit your site.** Skip inactive plugins, keep a list of plugins and themes never to check, and choose a gentler scan speed for cheap shared hosting.
+* **In Site Health too.** Tools > Site Health shows whether your plugins and themes are ready for the next PHP version, with a link to the full results.
 * **Multisite ready.** On a network, Airworthy is activated network-wide and lives under Network Admin > Settings.
 
 = WP-CLI =
@@ -34,7 +40,7 @@ Everything on the admin screen also works from the terminal:
 * `wp airworthy scan --only=my-plugin --fail-on=blocker` exits with code 1 if anything would break, for CI.
 * `wp airworthy results --verdict=blocker,unknown` shows what needs attention.
 * `wp airworthy issues <slug>` lists one plugin's findings with file and line.
-* `wp airworthy rescan <slug>`, `wp airworthy export --file=report.csv`, `wp airworthy status`, `wp airworthy cancel` and `wp airworthy targets` do what their names say.
+* `wp airworthy rescan <slug>`, `wp airworthy export --file=report.csv`, `wp airworthy status`, `wp airworthy cancel`, `wp airworthy resume` and `wp airworthy targets` do what their names say.
 
 = Privacy =
 
@@ -92,6 +98,14 @@ Airworthy reads the code without running it. That catches most PHP upgrade probl
 
 It can't see what only happens when code runs. For example: code that builds function names at run time, behaviour that depends on your data or settings, and problems in files a plugin downloads or generates later. Some newer PHP changes (such as a few PHP 8.1 and 8.5 deprecations) can't be detected reliably by reading code yet. So a "Ready" verdict means no problems were found, not a guarantee. Test on a staging copy of your site, and keep a backup, before you switch.
 
+= Is a "Ready" result a guarantee that my site will work? =
+
+No. Airworthy reads code without running it, so some problems can't be seen this way: code that only fails when it runs with your data or settings, your server's configuration, or other software on your site. Treat the results as guidance for planning. Before changing PHP on your live site, back up your files and database, try the new version on a staging copy and check the pages that matter most (checkout, forms, logins), and make sure you know how to switch back. Airworthy is free software provided without any warranty (see the licence), and DigitalKind isn't liable for the results of changing your PHP version.
+
+= Why are some problems marked "already on your PHP"? =
+
+Airworthy compares the PHP version your site runs now with the one you're moving to. Only PHP changes in between can break something when you upgrade. Code hit by an older change (for example a function removed in PHP 7.0, on a site that already runs PHP 8.3) either never runs on your site or is already failing today, and upgrading doesn't change that. Those findings are still listed in each plugin's details, but they aren't counted as Blockers. If you're checking a copy of a site that runs on another server, choose its PHP version under "Compare from another PHP version".
+
 = What does each verdict mean? =
 
 * **Blocker:** needs attention before you upgrade. Some of its code will not work on the PHP version you picked, or it needs a newer PHP version than that.
@@ -127,15 +141,28 @@ Email security@airworthywp.com. Please don't post it in the public support forum
 
 == Screenshots ==
 
-1. Pick the PHP version to check against. Airworthy recommends the oldest version that still gets security fixes, and shows each version's support dates.
-2. Scans run in the background in small batches, so they never time out. You can leave the page.
-3. Results: a verdict for every plugin and theme, with a plain explanation, WordPress.org maintenance details, and plugins removed from WordPress.org called out.
-4. Details show each finding with its file, line and message. Old code that can't run on the chosen PHP version is marked as guarded, not as a problem.
+1. Pick the PHP version to check against. Airworthy suggests the oldest version that still gets security fixes, and shows how long your server's current version has left.
+2. Scans run in the background in small batches, so they never time out. You see what's being checked, how long is left, and each plugin's verdict as it comes in.
+3. One clear answer for the whole site, a count for each verdict, and which plugins have an update waiting.
+4. Results grouped by what to do next. Details show each finding with its file, line and what changed in PHP, and updates are one click away.
+5. Settings: skip inactive plugins, never check chosen plugins or themes, and pick a scan speed that suits your hosting. Changes save as you make them.
+6. A PHP upgrade check in Tools > Site Health, next to WordPress's own checks.
 
 == Changelog ==
 
 = 1.0.0 =
-* First release: PHP 8.0–8.5 compatibility scan of every plugin and theme, WordPress.org maintenance signals, background scanning, CSV export and WP-CLI commands.
+* First release.
+* Checks every plugin and theme against PHP 8.0 to 8.5, with a clear verdict for each: Blocker, Unknown, Suppressed by author, Guarded legacy code, Warnings or Ready.
+* Tells real problems from old code that never runs on the new PHP version, including code that falls back to a replacement PHP extension.
+* Marks problems that already apply on the PHP version your site runs now, so they aren't counted as new with this upgrade.
+* Optional WordPress.org check (you choose): plugins removed from WordPress.org, not updated in two years, or needing a newer PHP version.
+* Results grouped by what to do next: fix before you upgrade, keep an eye on, all good.
+* Shows which plugins and themes have an update waiting, with a one-click update; Airworthy checks them again after they're updated, including when a plugin is replaced by uploading a zip.
+* Shows how long your server's PHP version keeps getting security fixes.
+* Runs in the background with live progress, so a large site never times out. A stopped scan can be continued where it left off.
+* Settings: skip inactive plugins, never scan chosen plugins or themes, and choose how hard scans work your server.
+* A PHP upgrade readiness check in Tools > Site Health.
+* CSV export and WP-CLI commands.
 
 == Upgrade Notice ==
 

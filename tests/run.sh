@@ -61,7 +61,7 @@ echo "==> Verdicts for every target"
 FAILED=0
 for target in 8.0 8.1 8.2 8.3 8.4 8.5; do
 	OUT=$(mktemp)
-	if ! wp airworthy scan --target="$target" --only="$SLUGS" --wporg --format=summary > "$OUT.log" 2>&1 \
+	if ! wp airworthy scan --target="$target" --only="$SLUGS" --wporg --from=5.6 --format=summary > "$OUT.log" 2>&1 \
 		|| ! wp airworthy results --format=json --fields=slug,verdict,wporg > "$OUT" 2>> "$OUT.log"; then
 		echo "FAIL scan for PHP $target:"; cat "$OUT.log"; FAILED=1; continue
 	fi
@@ -76,6 +76,14 @@ if [ "$COMPONENTS" = "fx-implode,fx-ready" ]; then echo "PASS background scan co
 
 echo "==> Checks"
 AIRWORTHY_TESTS_ROOT="$ROOT" wp eval-file "$ROOT/tests/checks.php" || FAILED=1
+
+echo "==> Only changes after the PHP version compared from can be Blockers"
+wp airworthy scan --target=8.4 --only=fx-blocker-80 --no-wporg --from=7.4 --format=summary > /dev/null 2>&1
+V74=$(wp airworthy results --fields=verdict,existing --format=csv 2>/dev/null | tail -1)
+wp airworthy scan --target=8.4 --only=fx-blocker-80 --no-wporg --from=8.0 --format=summary > /dev/null 2>&1
+V80=$(wp airworthy results --fields=verdict,existing --format=csv 2>/dev/null | tail -1)
+if [ "$V74" = "blocker,0" ]; then echo "PASS from 7.4: create_function (removed in 8.0) is a Blocker"; else echo "FAIL from 7.4: $V74"; FAILED=1; fi
+if [ "$V80" = "ready,1" ]; then echo "PASS from 8.0: the same code is already so on 8.0, not a Blocker"; else echo "FAIL from 8.0: $V80"; FAILED=1; fi
 
 echo "==> WordPress.org lookups only with consent"
 # Clear cached answers too, so every lookup is a real (mocked) request and gets logged.

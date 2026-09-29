@@ -66,7 +66,7 @@ final class Budget {
 		$budget->started = microtime( true );
 
 		$max_execution = (int) ini_get( 'max_execution_time' );
-		$seconds       = self::MAX_SECONDS;
+		$seconds       = \Airworthy\Settings::batch_seconds(); // Scan speed setting (normal: MAX_SECONDS).
 		if ( $max_execution > 0 ) {
 			$request_start = isset( $_SERVER['REQUEST_TIME_FLOAT'] ) ? (float) $_SERVER['REQUEST_TIME_FLOAT'] : $budget->started;
 			$remaining     = $max_execution - ( $budget->started - $request_start );

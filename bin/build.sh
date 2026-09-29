@@ -9,6 +9,8 @@
 # Usage: bin/build.sh            release build from the committed composer.lock
 #        bin/build.sh --update   re-resolve dependencies after editing plugin/composer.json
 #        DEV_BUILD=1 bin/build.sh   development build: also includes src/Dev.php (previews)
+#        RC=2 bin/build.sh          test build numbered 1.0.0-rc.2: each test zip gets its own version,
+#                                   so sites can tell builds apart and browsers reload the admin screen
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -85,8 +87,18 @@ DEV_EXCLUDE="--exclude src/Dev.php"
 [ "${DEV_BUILD:-0}" = "1" ] && DEV_EXCLUDE=""
 # composer.json/.lock ship too, so the bundled libraries and their versions are visible.
 rsync -a --exclude vendor $DEV_EXCLUDE "$ROOT/plugin/" "$OUT/"
+if [ -n "${RC:-}" ]; then
+	# Release candidate: the built copy's version becomes X.Y.Z-rc.N (header and constant).
+	case "$RC" in *[!0-9]*|'') echo "RC must be a number, e.g. RC=2" >&2; exit 1 ;; esac
+	sed -i.bak -E "s/^( \* Version: +)([0-9]+\.[0-9]+\.[0-9]+)$/\1\2-rc.$RC/; s/('AIRWORTHY_VERSION', '[0-9]+\.[0-9]+\.[0-9]+)'/\1-rc.$RC'/" "$OUT/airworthy.php" && rm -f "$OUT/airworthy.php.bak"
+	grep -q "AIRWORTHY_VERSION', '[0-9.]*-rc.$RC'" "$OUT/airworthy.php" && grep -qE "^ \* Version: +[0-9.]+-rc.$RC$" "$OUT/airworthy.php" || { echo "Could not mark the release candidate's version." >&2; exit 1; }
+	# The readme's Stable tag follows, so Plugin Check on a test site doesn't report a mismatch.
+	sed -i.bak -E "s/^(Stable tag: *)([0-9]+\.[0-9]+\.[0-9]+)$/\1\2-rc.$RC/" "$OUT/readme.txt" && rm -f "$OUT/readme.txt.bak"
+	grep -qE "^Stable tag: *[0-9.]+-rc.$RC$" "$OUT/readme.txt" || { echo "Could not mark the release candidate's Stable tag." >&2; exit 1; }
+fi
+
 echo "==> Software bill of materials"
-VERSION=$(sed -n "s/.*define( 'AIRWORTHY_VERSION', '\([^']*\)' );.*/\1/p" "$ROOT/plugin/airworthy.php")
+VERSION=$(sed -n "s/.*define( 'AIRWORTHY_VERSION', '\([^']*\)' );.*/\1/p" "$OUT/airworthy.php")
 php "$ROOT/bin/sbom.php" "$VERSION" "$ROOT/plugin/composer.lock" "$OUT/sbom.cdx.json"
 cp "$OUT/sbom.cdx.json" "$ROOT/docs/sbom.cdx.json"
 

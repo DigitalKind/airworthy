@@ -79,6 +79,23 @@ final class Export {
 	}
 
 	/**
+	 * Why a component has no WordPress.org details, so the column is never silently empty.
+	 *
+	 * @param object $scan Scan row.
+	 * @param object $c    Component row.
+	 * @return string
+	 */
+	private static function wporg_blank( $scan, $c ) {
+		if ( 'theme' === $c->type ) {
+			return 'not looked up (theme)';
+		}
+		if ( 'off' === $scan->wporg_status ) {
+			return 'not checked (WordPress.org checks were off for this scan)';
+		}
+		return 'not checked yet (export again when the scan has finished)';
+	}
+
+	/**
 	 * File name for a scan's CSV, e.g. airworthy-php-8.4-2026-09-27.csv.
 	 *
 	 * @param object $scan Scan row.
@@ -118,7 +135,7 @@ final class Export {
 				(int) $c->suppressed,
 				(int) $c->guarded,
 				(int) $c->warnings,
-				isset( $w['status'] ) ? $w['status'] : '',
+				isset( $w['status'] ) ? $w['status'] : self::wporg_blank( $scan, $c ),
 				isset( $w['closed_date'] ) ? $w['closed_date'] : '',
 				isset( $w['closed_reason'] ) ? $w['closed_reason'] : '',
 				isset( $w['last_updated'] ) ? $w['last_updated'] : '',

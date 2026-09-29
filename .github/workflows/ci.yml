@@ -68,6 +68,7 @@ jobs:
           build-dir: build/airworthy
           slug: airworthy
 
+
   test:
     name: PHP ${{ matrix.php }} · WP ${{ matrix.wp }}${{ matrix.multisite && ' · multisite' || '' }} · ${{ matrix.db || 'mysql:8.0' }}
     needs: build
@@ -107,8 +108,15 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: mysqli, zip
           ini-values: memory_limit=512M
-          tools: wp-cli
           coverage: none
+      # WP-CLI straight from its official builds, with retries: setup-php's "tools: wp-cli"
+      # sometimes failed to download it and carried on, so later steps died with
+      # "wp: command not found" (exit 127).
+      - name: Install WP-CLI
+        run: |
+          curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors -o /tmp/wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+          sudo install -m 0755 /tmp/wp-cli.phar /usr/local/bin/wp
+          wp --info --allow-root | head -3
       - uses: actions/download-artifact@v4
         with:
           name: airworthy-zip

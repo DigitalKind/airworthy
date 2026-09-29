@@ -31,13 +31,13 @@ defined( 'ABSPATH' ) || exit;
 final class Installer {
 
 	/** Bump when the schema changes; maybe_upgrade() then re-runs dbDelta. */
-	const DB_VERSION = 4;
+	const DB_VERSION = 6;
 
 	/** Stored as a network option on multisite (plain option on single site). */
 	const OPTION_DB_VERSION = 'airworthy_db_version';
 
 	/** Every option the plugin owns, so uninstall can remove them all. */
-	const OPTIONS = array( self::OPTION_DB_VERSION, 'airworthy_unseen_scan', 'airworthy_wporg_consent' );
+	const OPTIONS = array( self::OPTION_DB_VERSION, 'airworthy_unseen_scan', 'airworthy_wporg_consent', 'airworthy_settings' );
 
 	/** Transient prefix for cached WordPress.org plugin data (Step 5). */
 	const TRANSIENT_PREFIX = 'airworthy_wporg_';
@@ -101,8 +101,11 @@ final class Installer {
 				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 				target_php varchar(10) NOT NULL,
 				host_php varchar(20) NOT NULL DEFAULT '',
+				from_php varchar(10) NOT NULL DEFAULT '',
 				status varchar(20) NOT NULL DEFAULT 'queued',
 				components_total int(10) unsigned NOT NULL DEFAULT 0,
+				skipped_inactive int(10) unsigned NOT NULL DEFAULT 0,
+				skipped_ignored int(10) unsigned NOT NULL DEFAULT 0,
 				files_total int(10) unsigned NOT NULL DEFAULT 0,
 				files_done int(10) unsigned NOT NULL DEFAULT 0,
 				count_blocker smallint(5) unsigned NOT NULL DEFAULT 0,
@@ -147,6 +150,7 @@ final class Installer {
 				warnings int(10) unsigned NOT NULL DEFAULT 0,
 				guarded int(10) unsigned NOT NULL DEFAULT 0,
 				suppressed int(10) unsigned NOT NULL DEFAULT 0,
+				existing int(10) unsigned NOT NULL DEFAULT 0,
 				files_skipped int(10) unsigned NOT NULL DEFAULT 0,
 				prepass longtext DEFAULT NULL,
 				wporg longtext DEFAULT NULL,

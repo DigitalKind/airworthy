@@ -1,29 +1,82 @@
 {
 	"about": "Expected results per fixture and target PHP version ('*' = every target). See docs/ACCURACY.md.",
 	"verdicts": {
-		"fx-ready": { "*": "ready" },
-		"fx-blocker-80": { "*": "blocker" },
-		"fx-guarded": { "*": "guarded" },
-		"fx-fake-guard": { "*": "blocker" },
-		"fx-cross-file": { "*": "guarded" },
-		"fx-cross-fake": { "*": "blocker" },
-		"fx-helper-guard": { "*": "guarded" },
-		"fx-helper-fake": { "*": "blocker" },
-		"fx-needs-php82": { "8.0": "blocker", "8.1": "blocker", "*": "ready" },
-		"fx-suppressed": { "*": "suppressed" },
-		"fx-implode": { "*": "blocker" },
-		"fx-data": { "*": "ready" },
-		"fx-own-prefix": { "*": "ready" },
-		"fx-unreadable": { "*": "unknown" },
-		"fx-symlink": { "*": "ready" },
-		"fx-large": { "*": "ready" },
-		"fx-warnings": { "8.0": "ready", "*": "warnings" },
-		"calendar": { "*": "ready" },
-		"wp-mail-bank": { "*": "ready" },
-		"wp-super-edit": { "*": "ready" }
+		"fx-ready": {
+			"*": "ready"
+		},
+		"fx-blocker-80": {
+			"*": "blocker"
+		},
+		"fx-guarded": {
+			"*": "guarded"
+		},
+		"fx-fake-guard": {
+			"*": "blocker"
+		},
+		"fx-cross-file": {
+			"*": "guarded"
+		},
+		"fx-cross-fake": {
+			"*": "blocker"
+		},
+		"fx-helper-guard": {
+			"*": "guarded"
+		},
+		"fx-helper-fake": {
+			"*": "blocker"
+		},
+		"fx-needs-php82": {
+			"8.0": "blocker",
+			"8.1": "blocker",
+			"*": "ready"
+		},
+		"fx-suppressed": {
+			"*": "suppressed"
+		},
+		"fx-implode": {
+			"*": "blocker"
+		},
+		"fx-data": {
+			"*": "ready"
+		},
+		"fx-own-prefix": {
+			"*": "ready"
+		},
+		"fx-unreadable": {
+			"*": "unknown"
+		},
+		"fx-symlink": {
+			"*": "ready"
+		},
+		"fx-large": {
+			"*": "ready"
+		},
+		"fx-warnings": {
+			"8.0": "ready",
+			"*": "warnings"
+		},
+		"calendar": {
+			"*": "ready"
+		},
+		"wp-mail-bank": {
+			"*": "ready"
+		},
+		"wp-super-edit": {
+			"*": "ready"
+		},
+		"fx-ext-fallback": {
+			"*": "guarded"
+		},
+		"fx-ext-fake": {
+			"*": "blocker"
+		}
 	},
 	"wporg": {
-		"fx-needs-php82": { "8.0": "requires PHP 8.2", "8.1": "requires PHP 8.2", "*": "ok" },
+		"fx-needs-php82": {
+			"8.0": "requires PHP 8.2",
+			"8.1": "requires PHP 8.2",
+			"*": "ok"
+		},
 		"fx-ready": "update 1.1.0",
 		"fx-blocker-80": "not listed",
 		"calendar": "not listed",

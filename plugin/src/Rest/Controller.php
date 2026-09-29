@@ -62,6 +62,11 @@ final class Controller {
 						'enum'        => Targets::ALL,
 						'description' => __( 'Exact PHP version to check against.', 'airworthy' ),
 					),
+					'from'   => array(
+						'type'        => 'string',
+						'pattern'     => '^[5-9]\\.[0-9]$',
+						'description' => __( 'PHP version the site upgrades from, e.g. 8.3. Default: this server\'s.', 'airworthy' ),
+					),
 					'wporg'  => array(
 						'type'        => 'boolean',
 						'description' => __( 'Whether to look plugins up on WordPress.org (sends their folder names). Saved as the site\'s choice. Default: the saved choice, off if none.', 'airworthy' ),
@@ -109,7 +114,7 @@ final class Controller {
 						'type'  => 'array',
 						'items' => array(
 							'type' => 'string',
-							'enum' => array( 'plain', 'guarded', 'suppressed' ),
+							'enum' => array( 'plain', 'guarded', 'suppressed', 'existing' ),
 						),
 					),
 					'page'      => array(
@@ -170,6 +175,16 @@ final class Controller {
 		);
 		register_rest_route(
 			$ns,
+			$scan . '/resume',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'resume' ),
+				'permission_callback' => $can,
+				'args'                => array( 'id' => $id ),
+			)
+		);
+		register_rest_route(
+			$ns,
 			$scan . '/nudge',
 			array(
 				'methods'             => 'POST',
@@ -192,7 +207,8 @@ final class Controller {
 			$wporg = (bool) $request['wporg'];
 			Consent::set( $wporg ); // The administrator's explicit answer, remembered for next time.
 		}
-		$id = Queue::start( (string) $request['target'], get_current_user_id(), $wporg );
+		$from = null !== $request['from'] && '' !== $request['from'] ? (string) $request['from'] : null;
+		$id   = Queue::start( (string) $request['target'], get_current_user_id(), $wporg, $from );
 		if ( is_wp_error( $id ) ) {
 			$id->add_data( array( 'status' => 'airworthy_scan_running' === $id->get_error_code() ? 409 : 400 ) );
 			return $id;
@@ -240,9 +256,10 @@ final class Controller {
 		}
 		$t = Installer::tables();
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, type, slug, name, version, is_active, status, phase, verdict, errors, guarded, suppressed, warnings, files_total, files_done, files_failed, files_skipped, files_ignored, wporg FROM {$t['components']} WHERE scan_id = %d ORDER BY id", $scan->id ) );
+		$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, type, slug, name, version, is_active, status, phase, verdict, errors, guarded, suppressed, existing, warnings, files_total, files_done, files_failed, files_skipped, files_ignored, wporg FROM {$t['components']} WHERE scan_id = %d ORDER BY id", $scan->id ) );
 
 		$order      = array_flip( Verdict::ALL );
+		$updates    = \Airworthy\Scan\Updates::all();
 		$components = array();
 		foreach ( $rows as $r ) {
 			$components[] = array(
@@ -259,6 +276,7 @@ final class Controller {
 					'errors'     => (int) $r->errors,
 					'suppressed' => (int) $r->suppressed,
 					'guarded'    => (int) $r->guarded,
+					'existing'   => (int) $r->existing,
 					'warnings'   => (int) $r->warnings,
 				),
 				'files'   => array(
@@ -269,6 +287,7 @@ final class Controller {
 					'ignored' => (int) $r->files_ignored,
 				),
 				'wporg'   => $r->wporg ? json_decode( $r->wporg, true ) : null,
+				'update'  => isset( $updates[ $r->type . '|' . $r->slug ] ) ? $updates[ $r->type . '|' . $r->slug ] : null,
 			);
 		}
 		// Most serious first, then by name.
@@ -319,7 +338,7 @@ final class Controller {
 		$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$t['issues']} WHERE $sql_where", $args ) );
 		// Scan problems first, then errors, then warnings; within each by file and line.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table; filter values plus LIMIT/OFFSET are passed as one merged array.
-		$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT file, line, severity, context, rule, message FROM {$t['issues']} WHERE $sql_where ORDER BY CASE severity WHEN 'scan' THEN 0 WHEN 'error' THEN 1 WHEN 'warning' THEN 2 ELSE 3 END, CASE context WHEN 'plain' THEN 0 WHEN 'suppressed' THEN 1 ELSE 2 END, file, line LIMIT %d OFFSET %d", array_merge( $args, array( $per_page, $offset ) ) ) );
+		$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT file, line, severity, context, rule, message FROM {$t['issues']} WHERE $sql_where ORDER BY CASE severity WHEN 'scan' THEN 0 WHEN 'error' THEN 1 WHEN 'warning' THEN 2 ELSE 3 END, CASE context WHEN 'plain' THEN 0 WHEN 'suppressed' THEN 1 WHEN 'guarded' THEN 2 ELSE 3 END, file, line LIMIT %d OFFSET %d", array_merge( $args, array( $per_page, $offset ) ) ) );
 
 		$items = array();
 		foreach ( $rows as $r ) {
@@ -426,6 +445,24 @@ final class Controller {
 	}
 
 	/**
+	 * POST /scans/{id}/resume: continues a stopped scan where it left off.
+	 *
+	 * @param \WP_REST_Request $request Request.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public static function resume( \WP_REST_Request $request ) {
+		if ( ! self::scan_row( (int) $request['id'] ) ) {
+			return self::not_found();
+		}
+		$result = Queue::resume( (int) $request['id'] );
+		if ( is_wp_error( $result ) ) {
+			$result->add_data( array( 'status' => 409 ) );
+			return $result;
+		}
+		return new \WP_REST_Response( self::scan_summary( self::scan_row( (int) $request['id'] ) ), 200 );
+	}
+
+	/**
 	 * POST /scans/{id}/nudge: runs one batch in this request (file scan, or the WordPress.org
 	 * lookups left once it's done). The admin screen calls it while open, so scans still
 	 * progress on sites where WP-Cron is disabled or rarely triggered.
@@ -472,23 +509,32 @@ final class Controller {
 		}
 		$total = (int) $s->files_total;
 		return array(
-			'id'          => (int) $s->id,
-			'target_php'  => $s->target_php,
-			'host_php'    => $s->host_php,
-			'status'      => $s->status,
-			'progress'    => array(
+			'id'           => (int) $s->id,
+			'target_php'   => $s->target_php,
+			'host_php'     => $s->host_php,
+			'host_support' => Targets::support_status( \Airworthy\Env::php_version() ), // The server now, not when scanned.
+			'from_php'     => isset( $s->from_php ) && '' !== $s->from_php ? $s->from_php : null,
+			'status'       => $s->status,
+			'resumable'    => Queue::can_resume( $s ),
+			'progress'     => array(
 				'files_done'  => (int) $s->files_done,
 				'files_total' => $total,
 				'percent'     => $total ? (int) floor( 100 * (int) $s->files_done / $total ) : ( 'complete' === $s->status ? 100 : 0 ),
 				'components'  => (int) $s->components_total,
 			),
-			'counts'      => $counts,
-			'wporg'       => $s->wporg_status ? $s->wporg_status : null, // pending | done | partial | offline | off (no consent).
-			'export_url'  => \Airworthy\Admin\Export::url( (int) $s->id ),
-			'created_at'  => self::iso( $s->created_at ),
-			'started_at'  => self::iso( $s->started_at ),
-			'finished_at' => self::iso( $s->finished_at ),
-			'error'       => 'failed' === $s->status ? __( 'The scan could not be completed. Try again, or ask your host whether background tasks (WP-Cron) are working.', 'airworthy' ) : null,
+			'skipped'      => array(
+				'inactive' => isset( $s->skipped_inactive ) ? (int) $s->skipped_inactive : 0,
+				'ignored'  => isset( $s->skipped_ignored ) ? (int) $s->skipped_ignored : 0,
+			),
+			'settings_url' => add_query_arg( 'tab', 'settings', \Airworthy\Admin\Page::url() ),
+			'updates_url'  => current_user_can( 'update_plugins' ) ? self_admin_url( 'update-core.php' ) : null,
+			'counts'       => $counts,
+			'wporg'        => $s->wporg_status ? $s->wporg_status : null, // pending | done | partial | offline | off (no consent).
+			'export_url'   => \Airworthy\Admin\Export::url( (int) $s->id ),
+			'created_at'   => self::iso( $s->created_at ),
+			'started_at'   => self::iso( $s->started_at ),
+			'finished_at'  => self::iso( $s->finished_at ),
+			'error'        => 'failed' === $s->status ? __( 'The scan could not be completed. Try again, or ask your host whether background tasks (WP-Cron) are working.', 'airworthy' ) : null,
 		);
 	}
 

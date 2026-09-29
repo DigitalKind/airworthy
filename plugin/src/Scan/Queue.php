@@ -58,6 +58,15 @@ final class Queue {
 	 */
 	const RECOVERY_DELAY = 60;
 
+	/** Context of an error whose PHP change already applies on the version the site upgrades from. */
+	const CONTEXT_EXISTING = 'existing';
+
+	/**
+	 * PHP_CodeSniffer rules that report harmless behaviour notes, not failures: counted as
+	 * warnings. Self-closing tags in strip_tags()'s allowed list are only ignored (PHP 5.3.4+).
+	 */
+	const NOTE_RULES = array( 'PHPCompatibility.ParameterValues.ForbiddenStripTagsSelfClosingXHTML' );
+
 	/** Rules recorded (severity "scan") for files that weren't checked. */
 	const RULE_UNREADABLE = 'Airworthy.Scan.Unreadable';
 	const RULE_CRASHED    = 'Airworthy.Scan.Crashed';
@@ -68,17 +77,24 @@ final class Queue {
 	/**
 	 * Starts a scan against one target PHP version.
 	 *
-	 * @param string    $target  Exact PHP version, e.g. "8.4".
-	 * @param int       $user_id Who started it.
-	 * @param bool|null $wporg   Whether to look plugins up on WordPress.org; null = the site's
-	 *                           saved choice (see Wporg\Consent), which is off until answered.
+	 * @param string      $target  Exact PHP version, e.g. "8.4".
+	 * @param int         $user_id Who started it.
+	 * @param bool|null   $wporg   Whether to look plugins up on WordPress.org; null = the site's
+	 *                             saved choice (see Wporg\Consent), which is off until answered.
+	 * @param string|null $from    PHP version the site upgrades from, e.g. "8.3"; null = this
+	 *                             server's. Problems from PHP changes up to it already apply
+	 *                             today, so they're not counted as Blockers (see scan_one()).
 	 * @return int|\WP_Error Scan ID.
 	 */
-	public static function start( $target, $user_id = 0, $wporg = null ) {
+	public static function start( $target, $user_id = 0, $wporg = null, $from = null ) {
 		global $wpdb;
 
 		if ( ! Targets::is_valid( $target ) ) {
 			return new \WP_Error( 'airworthy_bad_target', __( 'That PHP version is not supported.', 'airworthy' ) );
+		}
+		$from = null === $from ? Targets::minor( \Airworthy\Env::php_version() ) : (string) $from;
+		if ( ! Targets::is_valid_from( $from ) ) {
+			return new \WP_Error( 'airworthy_bad_from', __( 'That PHP version to compare from is not valid.', 'airworthy' ) );
 		}
 		if ( ! function_exists( 'as_enqueue_async_action' ) ) {
 			return new \WP_Error( 'airworthy_no_queue', __( 'The background job library failed to load.', 'airworthy' ) );
@@ -96,12 +112,13 @@ final class Queue {
 			array(
 				'target_php'   => $target,
 				'host_php'     => \Airworthy\Env::php_version(),
+				'from_php'     => $from,
 				'status'       => 'queued',
 				'wporg_status' => ( null === $wporg ? \Airworthy\Wporg\Consent::allowed() : $wporg ) ? '' : 'off',
 				'created_by'   => (int) $user_id,
 				'created_at'   => self::now(),
 			),
-			array( '%s', '%s', '%s', '%s', '%d', '%s' )
+			array( '%s', '%s', '%s', '%s', '%s', '%d', '%s' )
 		);
 		$scan_id = (int) $wpdb->insert_id;
 		if ( ! $scan_id ) {
@@ -149,7 +166,7 @@ final class Queue {
 		}
 
 		$installed = array();
-		foreach ( Components::discover() as $row ) {
+		foreach ( Components::discover( false ) as $row ) { // Rescans may name an ignored plugin.
 			$installed[ $row['type'] . '|' . $row['slug'] ] = $row;
 		}
 		$any_plugin = false;
@@ -190,6 +207,7 @@ final class Queue {
 					'warnings'      => 0,
 					'guarded'       => 0,
 					'suppressed'    => 0,
+					'existing'      => 0,
 					'prepass'       => null,
 					'wporg'         => null,
 					'started_at'    => null,
@@ -231,7 +249,20 @@ final class Queue {
 	 */
 	public static function after_upgrade( $upgrader, $extra ) {
 		global $wpdb;
-		if ( empty( $extra['action'] ) || 'update' !== $extra['action'] || empty( $extra['type'] ) ) {
+		if ( empty( $extra['action'] ) || empty( $extra['type'] ) ) {
+			return;
+		}
+		// "Replace current with uploaded" (how many paid plugins are updated) is reported as an
+		// install: treat it as an update when that plugin or theme is already in the results.
+		if ( 'install' === $extra['action'] && is_object( $upgrader ) ) {
+			if ( 'plugin' === $extra['type'] && method_exists( $upgrader, 'plugin_info' ) && $upgrader->plugin_info() ) {
+				$extra['plugins'] = array( $upgrader->plugin_info() );
+			} elseif ( 'theme' === $extra['type'] && method_exists( $upgrader, 'theme_info' ) && $upgrader->theme_info() ) {
+				$extra['themes'] = array( $upgrader->theme_info()->get_stylesheet() );
+			} else {
+				return;
+			}
+		} elseif ( 'update' !== $extra['action'] ) {
 			return;
 		}
 		$t = Installer::tables();
@@ -266,7 +297,9 @@ final class Queue {
 	}
 
 	/**
-	 * Cancels a scan and its queued jobs. Results so far are kept.
+	 * Cancels a scan and its queued jobs. Results so far are kept, and resume() can carry on
+	 * from here. The lock is left to expire, so a batch still running when the scan was
+	 * stopped can't overlap one started by a quick resume.
 	 *
 	 * @param int $scan_id Scan ID.
 	 */
@@ -274,11 +307,64 @@ final class Queue {
 		global $wpdb;
 		$t = Installer::tables();
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$wpdb->query( $wpdb->prepare( "UPDATE {$t['scans']} SET status = 'cancelled', finished_at = %s, locked_until = NULL WHERE id = %d AND status IN ('queued','running')", self::now(), $scan_id ) );
+		$wpdb->query( $wpdb->prepare( "UPDATE {$t['scans']} SET status = 'cancelled', finished_at = %s WHERE id = %d AND status IN ('queued','running')", self::now(), $scan_id ) );
 		if ( function_exists( 'as_unschedule_all_actions' ) ) {
 			as_unschedule_all_actions( self::HOOK, array( (int) $scan_id ), Installer::JOB_GROUP );
 			as_unschedule_all_actions( \Airworthy\Wporg\Fetcher::HOOK, array( (int) $scan_id ), Installer::JOB_GROUP );
 		}
+	}
+
+	/**
+	 * Whether a stopped scan can be continued: it's the latest scan and nothing else is running.
+	 *
+	 * @param object $scan Scan row (id, status).
+	 * @return bool
+	 */
+	public static function can_resume( $scan ) {
+		global $wpdb;
+		if ( ! $scan || 'cancelled' !== $scan->status ) {
+			return false;
+		}
+		$t = Installer::tables();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
+		$latest = (int) $wpdb->get_var( "SELECT MAX(id) FROM {$t['scans']}" );
+		return (int) $scan->id === $latest;
+	}
+
+	/**
+	 * Continues a stopped scan where it left off: finished plugins and themes keep their
+	 * results, the one in progress carries on from its next file, and the rest follow.
+	 *
+	 * @param int $scan_id Scan ID.
+	 * @return true|\WP_Error
+	 */
+	public static function resume( $scan_id ) {
+		global $wpdb;
+		$t = Installer::tables();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
+		$scan = $wpdb->get_row( $wpdb->prepare( "SELECT id, status, started_at, wporg_status FROM {$t['scans']} WHERE id = %d", $scan_id ) );
+		if ( ! $scan ) {
+			return new \WP_Error( 'airworthy_not_found', __( 'Not found.', 'airworthy' ) );
+		}
+		if ( self::active_scan_id() ) {
+			return new \WP_Error( 'airworthy_scan_running', __( 'A scan is already running.', 'airworthy' ) );
+		}
+		if ( ! self::can_resume( $scan ) ) {
+			return new \WP_Error( 'airworthy_cannot_resume', __( 'Only the latest scan can be continued, and only if it was stopped. Start a new scan instead.', 'airworthy' ) );
+		}
+		if ( ! function_exists( 'as_enqueue_async_action' ) || ! Engine::is_available() ) {
+			return new \WP_Error( 'airworthy_no_queue', __( 'The scan can\'t run on this copy of the plugin. Reinstall it from WordPress.org.', 'airworthy' ) );
+		}
+
+		// A scan stopped before its first batch hasn't listed its plugins yet: it starts over.
+		$status = null === $scan->started_at ? 'queued' : 'running';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
+		$wpdb->query( $wpdb->prepare( "UPDATE {$t['scans']} SET status = %s, finished_at = NULL, error = NULL, attempts = 0 WHERE id = %d AND status = 'cancelled'", $status, $scan_id ) );
+		if ( 'pending' === $scan->wporg_status ) {
+			\Airworthy\Wporg\Fetcher::enqueue( (int) $scan_id ); // Its lookups were stopped too.
+		}
+		self::enqueue_now( (int) $scan_id );
+		return true;
 	}
 
 	/**
@@ -349,7 +435,12 @@ final class Queue {
 		as_unschedule_all_actions( self::HOOK, array( $scan_id ), Installer::JOB_GROUP );
 		self::unlock( $scan_id );
 		if ( $more ) {
-			self::enqueue_now( $scan_id );
+			$pause = \Airworthy\Settings::batch_pause(); // Scan speed "gentle" spaces batches out.
+			if ( $pause > 0 && ! ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+				as_schedule_single_action( time() + $pause, self::HOOK, array( $scan_id ), Installer::JOB_GROUP, false, self::JOB_PRIORITY );
+			} else {
+				self::enqueue_now( $scan_id );
+			}
 		}
 
 		// This batch used most of the request. Stop Action Scheduler starting more jobs in it
@@ -422,6 +513,8 @@ final class Queue {
 			'started_at'       => self::now(),
 			'components_total' => $count,
 			'files_total'      => $total,
+			'skipped_inactive' => Components::$last_skipped['inactive'],
+			'skipped_ignored'  => Components::$last_skipped['ignored'],
 		);
 		// WordPress.org signals are fetched alongside the file scan, when the site agreed to it.
 		if ( 'off' !== $scan->wporg_status ) {
@@ -457,6 +550,7 @@ final class Queue {
 					'errors'        => (int) $c->errors,
 					'guarded'       => (int) $c->guarded,
 					'suppressed'    => (int) $c->suppressed,
+					'existing'      => (int) $c->existing,
 					'warnings'      => (int) $c->warnings,
 					'files_done'    => (int) $c->files_done,
 					'files_failed'  => (int) $c->files_failed,
@@ -465,6 +559,7 @@ final class Queue {
 				),
 				'phase'    => $c->phase,
 				'target'   => $scan->target_php,
+				'from'     => isset( $scan->from_php ) ? (string) $scan->from_php : '',
 			);
 			$state['root'] = Components::root( $c->type, $c->rel_path, $c->slug );
 			$root          = Components::root( $c->type, $c->rel_path, $c->slug );
@@ -606,6 +701,11 @@ final class Queue {
 				$classifier = new Classifier( (string) file_get_contents( $path ), $state['files'][ $index ], $state['target'], $state['own'], $graph );
 			}
 			$issues[ $k ]['context'] = $classifier->classify( $issue );
+			// A removal that already applies on the PHP version the site runs now isn't caused by
+			// this upgrade: that code either never runs today or already fails today.
+			if ( 'error' === $issue['severity'] && in_array( $issues[ $k ]['context'], array( Classifier::PLAIN, Classifier::SUPPRESSED ), true ) && self::already_applies( $issue['message'], $state['from'] ) ) {
+				$issues[ $k ]['context'] = self::CONTEXT_EXISTING;
+			}
 			if ( Classifier::OWN_CODE === $issues[ $k ]['context'] ) {
 				// Not a PHP problem: keep it visible as a notice explaining why it doesn't count.
 				$issues[ $k ]['severity'] = 'notice';
@@ -619,6 +719,8 @@ final class Queue {
 			}
 			if ( 'warning' === $issue['severity'] ) {
 				++$state['counts']['warnings'];
+			} elseif ( self::CONTEXT_EXISTING === $issues[ $k ]['context'] ) {
+				++$state['counts']['existing'];
 			} elseif ( Classifier::GUARDED === $issues[ $k ]['context'] ) {
 				++$state['counts']['guarded'];
 			} elseif ( Classifier::SUPPRESSED === $issues[ $k ]['context'] ) {
@@ -656,12 +758,61 @@ final class Queue {
 				}
 				return array( 'failed' => $issue['message'] );
 			}
-			if ( 'error' === $issue['severity'] && '.Changed' === substr( $rule, -8 ) ) {
+			if ( 'error' === $issue['severity'] && ( '.Changed' === substr( $rule, -8 ) || self::is_note_rule( $rule ) ) ) {
 				$issue['severity'] = 'warning';
 			}
 			$out[] = $issue;
 		}
 		return $out;
+	}
+
+	/**
+	 * Whether a rule only reports a harmless behaviour note (NOTE_RULES).
+	 *
+	 * @param string $rule Rule code.
+	 * @return bool
+	 */
+	private static function is_note_rule( $rule ) {
+		foreach ( self::NOTE_RULES as $note ) {
+			if ( 0 === strpos( $rule, $note ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * The PHP version in which a finding's change took effect, read from PHPCompatibility's
+	 * message: "removed since PHP 8.0", else the last "since / as of / in PHP x.y".
+	 *
+	 * @param string $message Finding message.
+	 * @return string|null "x.y", or null when the message names no version.
+	 */
+	public static function change_version( $message ) {
+		// "PHP" is sometimes left out: "deprecated since 8.4".
+		if ( preg_match( '/removed (?:since|in) (?:PHP )?(?:version )?(\d+\.\d+)/i', $message, $m ) ) {
+			return $m[1];
+		}
+		if ( preg_match_all( '/(?:since|as of|in) PHP (?:version )?(\d+\.\d+)/i', $message, $m ) ) {
+			return (string) end( $m[1] );
+		}
+		if ( preg_match( '/(?:deprecated|removed) (?:since|as of|in) (\d+\.\d+)/i', $message, $m ) ) {
+			return $m[1];
+		}
+		return null;
+	}
+
+	/**
+	 * Whether a finding's change already applies on the PHP version the site upgrades from.
+	 * Unknown versions count as new (the cautious answer).
+	 *
+	 * @param string $message Finding message.
+	 * @param string $from    "x.y", or '' when the scan has none (older scans).
+	 * @return bool
+	 */
+	public static function already_applies( $message, $from ) {
+		$version = self::change_version( $message );
+		return '' !== $from && null !== $version && version_compare( $version, $from, '<=' );
 	}
 
 	/**

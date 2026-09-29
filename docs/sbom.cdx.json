@@ -3,7 +3,7 @@
     "specVersion": "1.5",
     "version": 1,
     "metadata": {
-        "timestamp": "2026-09-27T17:39:50Z",
+        "timestamp": "2026-09-29T13:08:59Z",
         "component": {
             "type": "application",
             "bom-ref": "pkg:wordpress-plugin/airworthy@1.0.0",

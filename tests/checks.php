@@ -45,9 +45,43 @@ $check( 'Verdict: Suppressed beats Guarded', Verdict::SUPPRESSED === Verdict::fr
 $check( 'Verdict: Guarded beats Warnings', Verdict::GUARDED === Verdict::from_counts( array( 'guarded' => 1, 'warnings' => 5 ) ) );
 $check( 'Verdict: nothing found is Ready', Verdict::READY === Verdict::from_counts( array() ) );
 
+// --- The PHP version each finding's change took effect in.
+$versions = array(
+	'Function create_function() is deprecated since PHP 7.2 and removed since PHP 8.0; Use an anonymous function' => '8.0',
+	"Extension 'mysql_' is deprecated since PHP 5.5 and removed since PHP 7.0; Use mysqli instead" => '7.0',
+	'Indirect access to variables, properties and methods will be evaluated strictly in left-to-right order since PHP 7.0.' => '7.0',
+	'Passing E_USER_ERROR to trigger_error() is deprecated since 8.4.' => '8.4', // "PHP" left out of the message.
+	'Something with no version' => null,
+);
+foreach ( $versions as $message => $want ) {
+	$check( 'Change version: ' . substr( $message, 0, 40 ), $want === \Airworthy\Scan\Queue::change_version( $message ), wp_json_encode( \Airworthy\Scan\Queue::change_version( $message ) ) );
+}
+$check( 'Already applies: removed in 8.0, compared from 8.3', \Airworthy\Scan\Queue::already_applies( 'removed since PHP 8.0', '8.3' ) );
+$check( 'Not yet: removed in 8.4, compared from 8.3', ! \Airworthy\Scan\Queue::already_applies( 'removed since PHP 8.4', '8.3' ) );
+$check( 'Unknown version counts as new', ! \Airworthy\Scan\Queue::already_applies( 'no version here', '8.3' ) );
+
+// --- Settings: skip inactive plugins, ignore list, scan speed.
+$saved = get_site_option( 'airworthy_settings', null );
+update_site_option( 'airworthy_settings', array( 'skip_inactive' => true, 'ignore' => array( 'plugin:fx-ready', 'plugin:no such thing' ), 'speed' => 'bogus' ) );
+$found  = wp_list_pluck( \Airworthy\Scan\Components::discover(), 'slug' );
+$active = array_filter( \Airworthy\Scan\Components::discover( false ), function ( $c ) { return 'plugin' === $c['type'] && $c['is_active']; } );
+$check( 'Settings: ignored plugins are left out', ! in_array( 'fx-ready', $found, true ) && \Airworthy\Scan\Components::$last_skipped['ignored'] >= 0 );
+$check( 'Settings: inactive plugins are left out, active ones kept', ! in_array( 'fx-implode', $found, true ) && in_array( 'airworthy', $found, true ) );
+$check( 'Settings: invalid values fall back safely', 'normal' === \Airworthy\Settings::get( 'speed' ) && array( 'plugin:fx-ready' ) === \Airworthy\Settings::get( 'ignore' ) );
+$check( 'Settings: discover( false ) ignores the settings', in_array( 'fx-ready', wp_list_pluck( \Airworthy\Scan\Components::discover( false ), 'slug' ), true ) );
+update_site_option( 'airworthy_settings', array( 'speed' => 'gentle' ) );
+$check( 'Settings: gentle speed means short batches with pauses', 8 === \Airworthy\Settings::batch_seconds() && 30 === \Airworthy\Settings::batch_pause() );
+if ( null === $saved ) {
+	delete_site_option( 'airworthy_settings' );
+} else {
+	update_site_option( 'airworthy_settings', $saved );
+}
+
 // --- WordPress.org name matching and signals.
 $check( 'Names: same plugin, extra words', Signals::names_match( 'Akismet', 'Akismet Anti-spam: Spam Protection' ) );
 $check( 'Names: different plugin, same folder', ! Signals::names_match( 'FX Acme Events', 'Calendar' ) );
+$check( 'Names: a brand with WP added (GiveWP)', Signals::names_match( 'Give - Donation Plugin', 'GiveWP &#8211; Donation Plugin and Fundraising Platform' ) );
+$check( 'Names: WP at the start (WPForms)', Signals::names_match( 'WPForms Lite', 'WPForms &#8211; Easy Form Builder for WordPress' ) );
 $record = array(
 	'listed'       => true,
 	'closed'       => false,
@@ -171,6 +205,29 @@ if ( 201 === $status ) {
 }
 list( $status ) = $call( 'GET', '/scans/999999' );
 $check( 'REST: unknown scan is 404', 404 === $status, (string) $status );
+
+// PHP support countdown.
+$support = Targets::support_status( '8.3.12', $day( '2026-09-27' ) );
+$check( 'Support: PHP 8.3 on 2026-09-27 has 15 months left', 'ok' === $support['level'] && 15 === $support['months'], wp_json_encode( $support ) );
+$support = Targets::support_status( '8.2.1', $day( '2026-09-27' ) );
+$check( 'Support: PHP 8.2 on 2026-09-27 ends soon', 'soon' === $support['level'] && 3 === $support['months'], wp_json_encode( $support ) );
+$support = Targets::support_status( '7.4.33', $day( '2026-09-27' ) );
+$check( 'Support: PHP 7.4 has ended', 'ended' === $support['level'], wp_json_encode( $support ) );
+$support = Targets::support_status( '8.0.30', $day( '2026-09-27' ) );
+$check( 'Support: PHP 8.0 has ended', 'ended' === $support['level'], wp_json_encode( $support ) );
+
+// Continue scan: only a stopped scan, and only the latest one.
+$check( 'Resume: a finished scan cannot be continued', ! \Airworthy\Scan\Queue::can_resume( (object) array( 'id' => PHP_INT_MAX, 'status' => 'complete' ) ) );
+$check( 'Resume: an older stopped scan cannot be continued', ! \Airworthy\Scan\Queue::can_resume( (object) array( 'id' => -1, 'status' => 'cancelled' ) ) );
+$check( 'Resume: an unknown scan is refused', is_wp_error( \Airworthy\Scan\Queue::resume( 999999 ) ) );
+
+// Site Health: the test is registered and answers for the site's PHP version.
+$tests = apply_filters( 'site_status_tests', array( 'direct' => array(), 'async' => array() ) );
+$check( 'Site Health: test is registered', isset( $tests['direct'][ \Airworthy\Admin\SiteHealth::TEST ] ) );
+$health = \Airworthy\Admin\SiteHealth::run( '8.5.1' );
+$check( 'Site Health: passes on the newest PHP version', 'good' === $health['status'], $health['label'] );
+$health = \Airworthy\Admin\SiteHealth::run( '7.2.34' );
+$check( 'Site Health: gives a result for an older PHP version', in_array( $health['status'], array( 'good', 'recommended' ), true ) && '' !== $health['label'], $health['label'] );
 
 wp_delete_user( (int) $editor_id );
 if ( isset( $site_admin ) ) {

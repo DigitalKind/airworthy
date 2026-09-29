@@ -191,6 +191,14 @@ final class Signals {
 		$name  = strtolower( html_entity_decode( $name, ENT_QUOTES, 'UTF-8' ) );
 		$name  = str_replace( '&', ' and ', $name );
 		$words = preg_split( '/[^a-z0-9]+/', $name, -1, PREG_SPLIT_NO_EMPTY );
+		// Brands often add "WP" to a word ("GiveWP" for "Give", "WPForms"): compare without it.
+		$words = array_map(
+			static function ( $word ) {
+				$bare = preg_replace( '/^wp(?=[a-z0-9]{3,}$)|(?<=^[a-z0-9]{3})wp$|(?<=[a-z0-9]{4})wp$/', '', $word );
+				return '' === $bare ? $word : $bare;
+			},
+			$words
+		);
 		return array_values( array_diff( array_unique( $words ), self::NAME_STOP_WORDS ) );
 	}
 
