@@ -54,8 +54,8 @@ final class Fetcher {
 		}
 		set_site_transient( $lock, 1, 2 * self::BUDGET + 30 );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$scan = $wpdb->get_row( $wpdb->prepare( "SELECT id, target_php, status, wporg_status FROM {$t['scans']} WHERE id = %d", $scan_id ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$scan = $wpdb->get_row( $wpdb->prepare( 'SELECT id, target_php, status, wporg_status FROM %i WHERE id = %d', $t['scans'], $scan_id ) );
 		// 'off' = no consent for this scan (Wporg\Consent): never contact WordPress.org, whoever calls.
 		if ( ! $scan || 'off' === $scan->wporg_status || in_array( $scan->status, array( 'cancelled', 'failed' ), true ) ) {
 			delete_site_transient( $lock );
@@ -74,8 +74,8 @@ final class Fetcher {
 		$started   = microtime( true );
 		$failures  = 0;
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, slug, name, version, rel_path FROM {$t['components']} WHERE scan_id = %d AND type = 'plugin' AND wporg IS NULL ORDER BY id", $scan_id ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, slug, name, version, rel_path FROM %i WHERE scan_id = %d AND type = 'plugin' AND wporg IS NULL ORDER BY id", $t['components'], $scan_id ) );
 		foreach ( $rows as $row ) {
 			if ( microtime( true ) - $started > self::BUDGET ) {
 				break;
@@ -109,8 +109,8 @@ final class Fetcher {
 			Results::refresh_component( (int) $row->id );
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$left = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$t['components']} WHERE scan_id = %d AND type = 'plugin' AND wporg IS NULL", $scan_id ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$left = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE scan_id = %d AND type = 'plugin' AND wporg IS NULL", $t['components'], $scan_id ) );
 		if ( $left > 0 ) {
 			delete_site_transient( $lock );
 			self::enqueue( $scan_id );
@@ -118,8 +118,8 @@ final class Fetcher {
 		}
 
 		// All done: record how it went, and refresh the scan's verdict counts if it has finished.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$stats  = $wpdb->get_row( $wpdb->prepare( "SELECT COUNT(*) AS total, SUM(wporg LIKE %s) AS unreachable FROM {$t['components']} WHERE scan_id = %d AND type = 'plugin'", '%"status":"unreachable"%', $scan_id ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$stats  = $wpdb->get_row( $wpdb->prepare( "SELECT COUNT(*) AS total, SUM(wporg LIKE %s) AS unreachable FROM %i WHERE scan_id = %d AND type = 'plugin'", '%"status":"unreachable"%', $t['components'], $scan_id ) );
 		$status = 0 === (int) $stats->unreachable ? 'done' : ( (int) $stats->unreachable === (int) $stats->total ? 'offline' : 'partial' );
 		$wpdb->update( $t['scans'], array( 'wporg_status' => $status ), array( 'id' => $scan_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		Results::refresh_scan( $scan_id );

@@ -195,6 +195,28 @@ $check( 'REST: administrators can read results', 200 === $status, (string) $stat
 list( $status, $data ) = $call( 'GET', "/scans/$scan_id/components/$comp_id/issues" );
 $paths = wp_json_encode( $data );
 $check( 'REST: findings list relative paths only', 200 === $status && false === strpos( $paths, WP_CONTENT_DIR ) && false === strpos( $paths, ABSPATH ), substr( $paths, 0, 200 ) );
+
+// The findings list and its filters, against counts taken straight from the table.
+$in_table = static function ( $where ) use ( $wpdb, $t, $scan_id, $comp_id ) {
+	return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$t['issues']} WHERE scan_id = %d AND component_id = %d $where", $scan_id, $comp_id ) ); // phpcs:ignore
+};
+$listed = static function ( $params ) use ( $scan_id, $comp_id ) {
+	$request = new WP_REST_Request( 'GET', "/airworthy/v1/scans/$scan_id/components/$comp_id/issues" );
+	foreach ( $params + array( 'per_page' => 100 ) as $k => $v ) {
+		$request->set_param( $k, $v );
+	}
+	$response = rest_do_request( $request );
+	$headers  = $response->get_headers();
+	return array( (int) $headers['X-WP-Total'], (array) $response->get_data() );
+};
+list( $total, $items ) = $listed( array() );
+$check( 'REST: findings list returns every finding', $total > 0 && $total === $in_table( '' ) && count( $items ) === min( 100, $total ), "$total listed, " . $in_table( '' ) . ' in table' );
+list( $total, $items ) = $listed( array( 'severity' => array( 'error' ) ) );
+$check( 'REST: severity filter', $total === $in_table( "AND severity = 'error'" ) && ! array_diff( array_unique( wp_list_pluck( $items, 'severity' ) ), array( 'error' ) ), "$total" );
+list( $total ) = $listed( array( 'severity' => array( 'error', 'warning' ), 'context' => array( 'plain' ) ) );
+$check( 'REST: several severities plus a context', $total === $in_table( "AND severity IN ('error','warning') AND context = 'plain'" ), "$total" );
+list( $total ) = $listed( array( 'severity' => array( 'notice' ) ) );
+$check( 'REST: a filter with no matches lists nothing', $total === $in_table( "AND severity = 'notice'" ), "$total" );
 list( $status ) = $call( 'POST', '/scans', array( 'target' => '9.9' ) );
 $check( 'REST: invalid target is rejected', 400 === $status, (string) $status );
 list( $status, $data ) = $call( 'POST', '/scans', array( 'target' => '8.4', 'wporg' => false ) );

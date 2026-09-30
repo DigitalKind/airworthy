@@ -153,8 +153,8 @@ final class Queue {
 	public static function rescan_components( $scan_id, array $component_ids ) {
 		global $wpdb;
 		$t = Installer::tables();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$scan = $wpdb->get_row( $wpdb->prepare( "SELECT id, status, wporg_status FROM {$t['scans']} WHERE id = %d", $scan_id ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$scan = $wpdb->get_row( $wpdb->prepare( 'SELECT id, status, wporg_status FROM %i WHERE id = %d', $t['scans'], $scan_id ) );
 		if ( ! $scan ) {
 			return new \WP_Error( 'airworthy_not_found', __( 'Not found.', 'airworthy' ) );
 		}
@@ -172,8 +172,8 @@ final class Queue {
 		$any_plugin = false;
 		$reset      = 0;
 		foreach ( array_unique( array_map( 'intval', $component_ids ) ) as $component_id ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-			$c = $wpdb->get_row( $wpdb->prepare( "SELECT id, type, slug FROM {$t['components']} WHERE id = %d AND scan_id = %d", $component_id, $scan_id ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+			$c = $wpdb->get_row( $wpdb->prepare( 'SELECT id, type, slug FROM %i WHERE id = %d AND scan_id = %d', $t['components'], $component_id, $scan_id ) );
 			if ( ! $c ) {
 				return new \WP_Error( 'airworthy_not_found', __( 'Not found.', 'airworthy' ) );
 			}
@@ -222,8 +222,8 @@ final class Queue {
 			return true;
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(files_total) FROM {$t['components']} WHERE scan_id = %d", $scan_id ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$total = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT SUM(files_total) FROM %i WHERE scan_id = %d', $t['components'], $scan_id ) );
 		$data  = array(
 			'status'      => 'running',
 			'finished_at' => null,
@@ -266,8 +266,8 @@ final class Queue {
 			return;
 		}
 		$t = Installer::tables();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$scan = $wpdb->get_row( "SELECT id, status FROM {$t['scans']} ORDER BY id DESC LIMIT 1" );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$scan = $wpdb->get_row( $wpdb->prepare( 'SELECT id, status FROM %i ORDER BY id DESC LIMIT 1', $t['scans'] ) );
 		if ( ! $scan || 'complete' !== $scan->status ) {
 			return;
 		}
@@ -285,8 +285,8 @@ final class Queue {
 		}
 		$ids = array();
 		foreach ( $slugs as $slug ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-			$id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$t['components']} WHERE scan_id = %d AND type = %s AND slug = %s", $scan->id, $extra['type'], $slug ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+			$id = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i WHERE scan_id = %d AND type = %s AND slug = %s', $t['components'], $scan->id, $extra['type'], $slug ) );
 			if ( $id ) {
 				$ids[] = $id;
 			}
@@ -306,8 +306,8 @@ final class Queue {
 	public static function cancel( $scan_id ) {
 		global $wpdb;
 		$t = Installer::tables();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$wpdb->query( $wpdb->prepare( "UPDATE {$t['scans']} SET status = 'cancelled', finished_at = %s WHERE id = %d AND status IN ('queued','running')", self::now(), $scan_id ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$wpdb->query( $wpdb->prepare( "UPDATE %i SET status = 'cancelled', finished_at = %s WHERE id = %d AND status IN ('queued','running')", $t['scans'], self::now(), $scan_id ) );
 		if ( function_exists( 'as_unschedule_all_actions' ) ) {
 			as_unschedule_all_actions( self::HOOK, array( (int) $scan_id ), Installer::JOB_GROUP );
 			as_unschedule_all_actions( \Airworthy\Wporg\Fetcher::HOOK, array( (int) $scan_id ), Installer::JOB_GROUP );
@@ -326,8 +326,8 @@ final class Queue {
 			return false;
 		}
 		$t = Installer::tables();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$latest = (int) $wpdb->get_var( "SELECT MAX(id) FROM {$t['scans']}" );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$latest = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT MAX(id) FROM %i', $t['scans'] ) );
 		return (int) $scan->id === $latest;
 	}
 
@@ -341,8 +341,8 @@ final class Queue {
 	public static function resume( $scan_id ) {
 		global $wpdb;
 		$t = Installer::tables();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$scan = $wpdb->get_row( $wpdb->prepare( "SELECT id, status, started_at, wporg_status FROM {$t['scans']} WHERE id = %d", $scan_id ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$scan = $wpdb->get_row( $wpdb->prepare( 'SELECT id, status, started_at, wporg_status FROM %i WHERE id = %d', $t['scans'], $scan_id ) );
 		if ( ! $scan ) {
 			return new \WP_Error( 'airworthy_not_found', __( 'Not found.', 'airworthy' ) );
 		}
@@ -358,8 +358,8 @@ final class Queue {
 
 		// A scan stopped before its first batch hasn't listed its plugins yet: it starts over.
 		$status = null === $scan->started_at ? 'queued' : 'running';
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$wpdb->query( $wpdb->prepare( "UPDATE {$t['scans']} SET status = %s, finished_at = NULL, error = NULL, attempts = 0 WHERE id = %d AND status = 'cancelled'", $status, $scan_id ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$wpdb->query( $wpdb->prepare( "UPDATE %i SET status = %s, finished_at = NULL, error = NULL, attempts = 0 WHERE id = %d AND status = 'cancelled'", $t['scans'], $status, $scan_id ) );
 		if ( 'pending' === $scan->wporg_status ) {
 			\Airworthy\Wporg\Fetcher::enqueue( (int) $scan_id ); // Its lookups were stopped too.
 		}
@@ -373,8 +373,8 @@ final class Queue {
 	public static function cancel_all() {
 		global $wpdb;
 		$t = Installer::tables();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$ids = $wpdb->get_col( "SELECT id FROM {$t['scans']} WHERE status IN ('queued','running')" );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM %i WHERE status IN ('queued','running')", $t['scans'] ) );
 		foreach ( (array) $ids as $id ) {
 			self::cancel( (int) $id );
 		}
@@ -389,8 +389,8 @@ final class Queue {
 	public static function active_scan_id() {
 		global $wpdb;
 		$t = Installer::tables();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$id = (int) $wpdb->get_var( "SELECT id FROM {$t['scans']} WHERE status IN ('queued','running') ORDER BY id DESC LIMIT 1" );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM %i WHERE status IN ('queued','running') ORDER BY id DESC LIMIT 1", $t['scans'] ) );
 		if ( $id && function_exists( 'as_has_scheduled_action' ) && ! as_has_scheduled_action( self::HOOK, array( $id ), Installer::JOB_GROUP ) ) {
 			self::enqueue_now( $id );
 		}
@@ -417,8 +417,8 @@ final class Queue {
 		$t    = Installer::tables();
 		$more = true;
 		try {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-			$scan = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t['scans']} WHERE id = %d", $scan_id ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+			$scan = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', $t['scans'], $scan_id ) );
 			if ( 'queued' === $scan->status ) {
 				self::prepare( $scan );
 			}
@@ -464,8 +464,8 @@ final class Queue {
 			return;
 		}
 		$t = Installer::tables();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$scan = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t['scans']} WHERE id = %d", $scan_id ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$scan = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', $t['scans'], $scan_id ) );
 		if ( $scan && 'queued' === $scan->status ) {
 			self::prepare( $scan );
 			self::sync_scan_progress( $scan_id );
@@ -972,8 +972,8 @@ final class Queue {
 	private static function record_scan_failure( $scan_id, \Throwable $e ) {
 		global $wpdb;
 		$t = Installer::tables();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$attempts = 1 + (int) $wpdb->get_var( $wpdb->prepare( "SELECT attempts FROM {$t['scans']} WHERE id = %d", $scan_id ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$attempts = 1 + (int) $wpdb->get_var( $wpdb->prepare( 'SELECT attempts FROM %i WHERE id = %d', $t['scans'], $scan_id ) );
 		$data     = array(
 			'attempts' => $attempts,
 			'error'    => get_class( $e ) . ': ' . $e->getMessage(),
@@ -995,8 +995,8 @@ final class Queue {
 	private static function sync_scan_progress( $scan_id ) {
 		global $wpdb;
 		$t = Installer::tables();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$done = (int) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(files_done + files_failed + files_skipped) FROM {$t['components']} WHERE scan_id = %d", $scan_id ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$done = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT SUM(files_done + files_failed + files_skipped) FROM %i WHERE scan_id = %d', $t['components'], $scan_id ) );
 		$wpdb->update( $t['scans'], array( 'files_done' => $done ), array( 'id' => $scan_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	}
 
@@ -1010,8 +1010,8 @@ final class Queue {
 		global $wpdb;
 		$t = Installer::tables();
 		foreach ( array( 'main', 'retry' ) as $phase ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-			$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t['components']} WHERE scan_id = %d AND phase = %s ORDER BY id LIMIT 1", $scan_id, $phase ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+			$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE scan_id = %d AND phase = %s ORDER BY id LIMIT 1', $t['components'], $scan_id, $phase ) );
 			if ( $row ) {
 				return $row;
 			}
@@ -1020,7 +1020,7 @@ final class Queue {
 	}
 
 	/**
-	 * Saves issues for one file, in multi-row inserts.
+	 * Saves issues for one file.
 	 *
 	 * @param object $c      Component row.
 	 * @param string $file   Path relative to the component.
@@ -1028,16 +1028,24 @@ final class Queue {
 	 */
 	private static function insert_issues( $c, $file, array $issues ) {
 		global $wpdb;
-		$t = Installer::tables();
-		foreach ( array_chunk( $issues, 100 ) as $chunk ) {
-			$rows   = array();
-			$values = array();
-			foreach ( $chunk as $issue ) {
-				$rows[] = '(%d,%d,%s,%d,%s,%s,%s,%s)';
-				array_push( $values, (int) $c->scan_id, (int) $c->id, mb_substr( $file, 0, 512 ), $issue['line'], $issue['severity'], isset( $issue['context'] ) ? $issue['context'] : Classifier::PLAIN, substr( $issue['rule'], 0, 191 ), self::without_server_paths( $issue['message'] ) );
-			}
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table; one placeholder group per row, all values passed to prepare().
-			$wpdb->query( $wpdb->prepare( "INSERT INTO {$t['issues']} (scan_id, component_id, file, line, severity, context, rule, message) VALUES " . implode( ',', $rows ), $values ) );
+		$t    = Installer::tables();
+		$file = mb_substr( $file, 0, 512 );
+		foreach ( $issues as $issue ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Own table.
+			$wpdb->insert(
+				$t['issues'],
+				array(
+					'scan_id'      => (int) $c->scan_id,
+					'component_id' => (int) $c->id,
+					'file'         => $file,
+					'line'         => (int) $issue['line'],
+					'severity'     => $issue['severity'],
+					'context'      => isset( $issue['context'] ) ? $issue['context'] : Classifier::PLAIN,
+					'rule'         => substr( $issue['rule'], 0, 191 ),
+					'message'      => self::without_server_paths( $issue['message'] ),
+				),
+				array( '%d', '%d', '%s', '%d', '%s', '%s', '%s', '%s' )
+			);
 		}
 	}
 
@@ -1052,8 +1060,8 @@ final class Queue {
 		global $wpdb;
 		$t     = Installer::tables();
 		$until = gmdate( 'Y-m-d H:i:s', time() + (int) ceil( $budget->seconds() ) + self::recovery_delay() );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$taken = $wpdb->query( $wpdb->prepare( "UPDATE {$t['scans']} SET locked_until = %s WHERE id = %d AND status IN ('queued','running') AND (locked_until IS NULL OR locked_until < %s)", $until, $scan_id, self::now() ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$taken = $wpdb->query( $wpdb->prepare( "UPDATE %i SET locked_until = %s WHERE id = %d AND status IN ('queued','running') AND (locked_until IS NULL OR locked_until < %s)", $t['scans'], $until, $scan_id, self::now() ) );
 		return 1 === (int) $taken;
 	}
 
@@ -1065,8 +1073,8 @@ final class Queue {
 	private static function unlock( $scan_id ) {
 		global $wpdb;
 		$t = Installer::tables();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$wpdb->query( $wpdb->prepare( "UPDATE {$t['scans']} SET locked_until = NULL WHERE id = %d", $scan_id ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$wpdb->query( $wpdb->prepare( 'UPDATE %i SET locked_until = NULL WHERE id = %d', $t['scans'], $scan_id ) );
 	}
 
 	/**
@@ -1099,16 +1107,17 @@ final class Queue {
 	private static function prune() {
 		global $wpdb;
 		$t = Installer::tables();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$old = array_slice( array_map( 'intval', (array) $wpdb->get_col( "SELECT id FROM {$t['scans']} ORDER BY id DESC" ) ), self::KEEP_SCANS );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$old = array_slice( array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( 'SELECT id FROM %i ORDER BY id DESC', $t['scans'] ) ) ), self::KEEP_SCANS );
 		if ( ! $old ) {
 			return;
 		}
-		$in = implode( ',', $old ); // Integers only.
+		// IDs only grow, so every older scan has an ID at or below the newest one being removed.
+		$newest_old = $old[0];
 		foreach ( array( 'issues', 'components' ) as $table ) {
-			$wpdb->query( "DELETE FROM {$t[ $table ]} WHERE scan_id IN ($in)" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE scan_id <= %d', $t[ $table ], $newest_old ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		}
-		$wpdb->query( "DELETE FROM {$t['scans']} WHERE id IN ($in)" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE id <= %d', $t['scans'], $newest_old ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	}
 
 	/**

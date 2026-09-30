@@ -72,6 +72,11 @@ fi
 # `composer dump-autoload` expects it.
 cp "$STAGE/composer.json" "$OUT/composer.json"
 
+echo "==> Removing PHP_CodeSniffer's own coding-style standards (the scan only runs PHPCompatibility)"
+for standard in Generic PEAR PSR1 PSR2 PSR12 Squiz Zend; do
+	rm -rf "$OUT/vendor/squizlabs/php_codesniffer/src/Standards/$standard"
+done
+
 echo "==> Regenerating scoped autoloader"
 composer dump-autoload --working-dir="$OUT" --classmap-authoritative --no-dev --quiet
 rm "$OUT/composer.json"

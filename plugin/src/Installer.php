@@ -192,7 +192,7 @@ final class Installer {
 		delete_site_transient( 'airworthy_file_count' ); // Rest\Controller::FILE_COUNT.
 
 		foreach ( self::tables() as $table ) {
-			$wpdb->query( "DROP TABLE IF EXISTS {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Table names are our own constants.
+			$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Table names are our own constants.
 		}
 
 		foreach ( self::OPTIONS as $option ) {
@@ -206,9 +206,9 @@ final class Installer {
 		foreach ( array( '_site_transient_', '_site_transient_timeout_', '_transient_', '_transient_timeout_' ) as $prefix ) {
 			$patterns[] = $wpdb->esc_like( $prefix . self::TRANSIENT_PREFIX ) . '%';
 		}
-		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s", $patterns[0], $patterns[1], $patterns[2], $patterns[3] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s', $wpdb->options, $patterns[0], $patterns[1], $patterns[2], $patterns[3] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		if ( is_multisite() ) {
-			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->sitemeta} WHERE meta_key LIKE %s OR meta_key LIKE %s", $patterns[0], $patterns[1] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE meta_key LIKE %s OR meta_key LIKE %s', $wpdb->sitemeta, $patterns[0], $patterns[1] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		}
 	}
 

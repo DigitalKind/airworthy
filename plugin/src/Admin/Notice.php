@@ -50,8 +50,8 @@ final class Notice {
 		}
 		global $wpdb;
 		$t = Installer::tables();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- Own table.
-		$scan = $wpdb->get_row( $wpdb->prepare( "SELECT target_php, count_blocker, count_unknown FROM {$t['scans']} WHERE id = %d AND status = 'complete'", $scan_id ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$scan = $wpdb->get_row( $wpdb->prepare( "SELECT target_php, count_blocker, count_unknown FROM %i WHERE id = %d AND status = 'complete'", $t['scans'], $scan_id ) );
 		if ( ! $scan ) {
 			return;
 		}

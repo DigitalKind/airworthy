@@ -53,7 +53,7 @@ ln -s "$OUTSIDE/broken.php" "$PLUGINS/fx-symlink/linked-file.php"
 
 wp plugin is-active airworthy $NETWORK 2>/dev/null || wp plugin activate airworthy $NETWORK
 wp option delete airworthy_tests_http_log >/dev/null 2>&1 || true
-wp eval 'global $wpdb; $wpdb->query( "DELETE FROM {$wpdb->sitemeta} WHERE meta_key LIKE \"_site_transient%airworthy_wporg_%\"" ); $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE \"_site_transient%airworthy_wporg_%\"" );' 2>/dev/null || true
+wp eval 'global $wpdb; if ( is_multisite() ) { $wpdb->query( "DELETE FROM {$wpdb->sitemeta} WHERE meta_key LIKE \"_site_transient%airworthy_wporg_%\"" ); } $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE \"_site_transient%airworthy_wporg_%\"" );' 2>/dev/null || true
 
 SLUGS=$(php -r '$e = json_decode( file_get_contents( $argv[1] ), true ); echo implode( ",", array_keys( $e["verdicts"] ) );' "$ROOT/tests/expected-verdicts.json")
 
