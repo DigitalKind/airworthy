@@ -1,4 +1,4 @@
-=== Airworthy ===
+=== Airworthy – PHP Compatibility & Upgrade Checker ===
 Contributors: digitalkind, airworthywp
 Tags: php, compatibility, upgrade, php 8, health check
 Requires at least: 6.9

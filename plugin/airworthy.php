@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name:       Airworthy
+ * Plugin Name:       Airworthy – PHP Compatibility & Upgrade Checker
  * Plugin URI:        https://airworthywp.com
  * Description:       Before you upgrade PHP, see which plugins and themes are ready, which need fixing, and which look abandoned.
  * Version:           1.0.0

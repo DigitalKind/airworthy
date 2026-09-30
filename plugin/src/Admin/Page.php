@@ -136,16 +136,14 @@ final class Page {
 	}
 
 	/**
-	 * Asset version: the plugin version, plus the file's modified time in development builds
-	 * (so browsers never keep a stale copy while the plugin is being worked on).
+	 * Asset version: the plugin version plus the file's modified time. A reinstall of the same
+	 * version still gets a new URL, so browsers and CDNs (which often keep CSS and JS for a year)
+	 * never serve a stale copy.
 	 *
 	 * @param string $relative Asset path relative to the plugin folder.
 	 * @return string
 	 */
 	private static function asset_version( $relative ) {
-		if ( false === strpos( AIRWORTHY_VERSION, '-dev' ) ) {
-			return AIRWORTHY_VERSION;
-		}
 		return AIRWORTHY_VERSION . '.' . (int) @filemtime( AIRWORTHY_DIR . $relative ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Missing file: version 0.
 	}
 

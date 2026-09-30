@@ -1028,8 +1028,9 @@ final class Queue {
 	 */
 	private static function insert_issues( $c, $file, array $issues ) {
 		global $wpdb;
-		$t    = Installer::tables();
-		$file = mb_substr( $file, 0, 512 );
+		$t = Installer::tables();
+		// Invalid UTF-8 (say, a file name saved in an old encoding) would make the insert fail.
+		$file = mb_substr( wp_scrub_utf8( $file ), 0, 512 );
 		foreach ( $issues as $issue ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Own table.
 			$wpdb->insert(
@@ -1042,7 +1043,7 @@ final class Queue {
 					'severity'     => $issue['severity'],
 					'context'      => isset( $issue['context'] ) ? $issue['context'] : Classifier::PLAIN,
 					'rule'         => substr( $issue['rule'], 0, 191 ),
-					'message'      => self::without_server_paths( $issue['message'] ),
+					'message'      => wp_scrub_utf8( self::without_server_paths( $issue['message'] ) ),
 				),
 				array( '%d', '%d', '%s', '%d', '%s', '%s', '%s', '%s' )
 			);
