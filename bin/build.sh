@@ -52,6 +52,29 @@ fi
 # Keep the lock file with the source so every build uses identical engine versions.
 cp "$STAGE/composer.lock" "$ROOT/plugin/composer.lock"
 
+# The readme lists each bundled library with its version: it must match what's really bundled.
+php -r '
+	$labels = array(
+		"squizlabs/php_codesniffer"                  => "PHP_CodeSniffer",
+		"phpcompatibility/php-compatibility"         => "PHPCompatibility",
+		"phpcompatibility/phpcompatibility-paragonie" => "PHPCompatibilityParagonie",
+		"phpcompatibility/phpcompatibility-wp"       => "PHPCompatibilityWP",
+		"phpcsstandards/phpcsutils"                  => "PHPCSUtils",
+		"woocommerce/action-scheduler"               => "Action Scheduler",
+	);
+	$readme = file_get_contents( $argv[2] );
+	$bad    = array();
+	foreach ( json_decode( file_get_contents( $argv[1] ), true )["packages"] as $p ) {
+		if ( isset( $labels[ $p["name"] ] ) && false === strpos( $readme, "* " . $labels[ $p["name"] ] . " " . ltrim( $p["version"], "v" ) . ":" ) ) {
+			$bad[] = $labels[ $p["name"] ] . " " . $p["version"];
+		}
+	}
+	if ( $bad ) {
+		fwrite( STDERR, "ERROR: plugin/readme.txt does not list these bundled versions: " . implode( ", ", $bad ) . "\n" );
+		exit( 1 );
+	}
+' "$ROOT/plugin/composer.lock" "$ROOT/plugin/readme.txt"
+
 echo "==> Scoping under Airworthy\\Vendor"
 AIRWORTHY_VENDOR_DIR="$STAGE/vendor" php "$SCOPER" add-prefix \
 	--config="$ROOT/scoper.inc.php" \

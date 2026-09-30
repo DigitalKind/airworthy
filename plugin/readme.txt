@@ -71,7 +71,7 @@ Airworthy's own code is GPLv2 or later. It bundles:
 * PHPCompatibilityParagonie 2.0.0-alpha2: LGPL-3.0-or-later. https://github.com/PHPCompatibility/PHPCompatibilityParagonie
 * PHPCompatibilityWP 3.0.0-alpha2: LGPL-3.0-or-later. https://github.com/PHPCompatibility/PHPCompatibilityWP
 * PHPCSUtils 1.2.3: LGPL-3.0-or-later. https://github.com/PHPCSStandards/PHPCSUtils
-* Action Scheduler 3.9.3: GPL-3.0-or-later. https://github.com/woocommerce/action-scheduler
+* Action Scheduler 4.2.0: GPL-3.0-or-later. https://github.com/woocommerce/action-scheduler
 
 Because Action Scheduler is GPLv3 and the PHPCompatibility libraries are LGPLv3, the plugin as distributed, taken as a whole, is covered by the GPL version 3. Each library's licence file is included in its folder. A software bill of materials (`sbom.cdx.json`, CycloneDX format) lists every bundled component and version.
 
