@@ -1,6 +1,6 @@
 === Airworthy – PHP Compatibility & Upgrade Checker ===
 Contributors: digitalkind, airworthywp
-Tags: php, compatibility, upgrade, php 8, health check
+Tags: php compatibility, php, php 8, upgrade, compatibility
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.2
@@ -8,7 +8,7 @@ Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Before you upgrade PHP, see which plugins and themes are ready, which need fixing, and which look abandoned.
+PHP compatibility checker for your PHP upgrade: see which plugins and themes are ready for PHP 8, which need fixing, and which look abandoned.
 
 == Description ==
 
