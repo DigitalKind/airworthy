@@ -1,6 +1,6 @@
 === Airworthy – PHP Compatibility & Upgrade Checker ===
 Contributors: digitalkind, airworthywp
-Tags: php compatibility, php, php 8, upgrade, compatibility
+Tags: php compatibility, php upgrade, php version, php 8, compatibility
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.2
