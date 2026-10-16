@@ -528,7 +528,15 @@ final class Command {
 			WP_CLI::log( $summary );
 			$existing = array_sum( wp_list_pluck( $this->components( $scan_id ), 'existing' ) );
 			if ( $existing && ! empty( $scan->from_php ) ) {
-				WP_CLI::log( sprintf( '%1$d problems already apply on PHP %2$s, so they are not caused by this upgrade (see the "existing" column).', $existing, $scan->from_php ) );
+				WP_CLI::log(
+					sprintf(
+						1 === $existing ?
+						'%1$d problem already applies on PHP %2$s, so it is not caused by this upgrade. To see where: wp airworthy results --fields=name,verdict,existing' :
+						'%1$d problems already apply on PHP %2$s, so they are not caused by this upgrade. To see where: wp airworthy results --fields=name,verdict,existing',
+						$existing,
+						$scan->from_php
+					)
+				);
 			}
 			if ( in_array( $scan->wporg_status, array( 'offline', 'partial' ), true ) ) {
 				WP_CLI::warning( 'WordPress.org could not be reached for some plugins; their maintenance details are missing.' );

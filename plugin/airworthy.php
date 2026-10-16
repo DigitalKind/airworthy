@@ -3,7 +3,7 @@
  * Plugin Name:       Airworthy – PHP Compatibility & Upgrade Checker
  * Plugin URI:        https://airworthywp.com
  * Description:       Before you upgrade PHP, see which plugins and themes are ready, which need fixing, and which look abandoned.
- * Version:           1.0.0
+ * Version:           1.0.1
  * Requires at least: 6.9
  * Requires PHP:      7.2
  * Author:            digitalkind.ie
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'AIRWORTHY_VERSION', '1.0.0' );
+define( 'AIRWORTHY_VERSION', '1.0.1' );
 define( 'AIRWORTHY_FILE', __FILE__ );
 define( 'AIRWORTHY_DIR', plugin_dir_path( __FILE__ ) );
 define( 'AIRWORTHY_URL', plugin_dir_url( __FILE__ ) );

@@ -1442,6 +1442,13 @@
 						'div',
 						{ class: 'airworthy-head-actions' },
 						el( 'a', { class: 'button', href: scan.export_url }, __( 'Export CSV', 'airworthy' ) ),
+						el(
+							'button',
+							{ type: 'button', class: 'button airworthy-copy-summary', onclick: function ( event ) {
+								copySummary( scan, components, event.currentTarget );
+							} },
+							__( 'Copy summary', 'airworthy' )
+						),
 						( config.resultsActions || [] ).map(
 							function ( a ) {
 								return el( 'a', { class: 'button', href: a.url.replace( '__SCAN__', String( scan.id ) ), target: '_blank', rel: 'noopener' }, a.label );
@@ -1534,7 +1541,8 @@
 						return groupBody( scan, g );
 					}
 				) : el( 'tbody', null, el( 'tr', null, el( 'td', { colspan: 5 }, __( 'No plugins or themes were checked in this scan.', 'airworthy' ) ) ) )
-			)
+			),
+			'complete' === scan.status && config.review ? reviewCard() : null
 		);
 		show( 'results' );
 		if ( components.some(
@@ -1548,6 +1556,181 @@
 			focusHeading( views.results );
 		}
 		watchWporg( scan );
+	}
+
+	/**
+	 * A plain-text summary of the results, for an email or support ticket to a host or
+	 * developer: the overall answer, then each plugin and theme grouped by what to do next.
+	 */
+	function summaryText( scan, components ) {
+		var counts = {};
+		components.forEach(
+			function ( c ) {
+				counts[ c.verdict ] = ( counts[ c.verdict ] || 0 ) + 1;
+			}
+		);
+		var needs   = counts.blocker || 0;
+		var overall = 'complete' !== scan.status ?
+			__( 'The scan was stopped before it finished, so these results are incomplete.', 'airworthy' ) :
+			( needs ?
+				/* translators: 1: number of plugins/themes, 2: PHP version. */
+				sprintf( _n( '%1$d plugin or theme needs attention before the upgrade to PHP %2$s.', '%1$d plugins or themes need attention before the upgrade to PHP %2$s.', needs, 'airworthy' ), needs, scan.target_php ) :
+				( counts.unknown ?
+					/* translators: %s: PHP version. */
+					sprintf( __( 'Nothing found that would break on PHP %s, but some files could not be checked.', 'airworthy' ), scan.target_php ) :
+					/* translators: %s: PHP version. */
+					sprintf( __( 'Nothing found that would break on PHP %s.', 'airworthy' ), scan.target_php ) ) );
+
+		var lines = [
+			/* translators: %s: PHP version. */
+			sprintf( __( 'Airworthy check for PHP %s', 'airworthy' ), scan.target_php ),
+			[
+				/* translators: %s: date and time. */
+				scan.finished_at ? sprintf( __( 'Checked %s', 'airworthy' ), formatDateTime( scan.finished_at ) ) : '',
+				/* translators: %s: PHP version. */
+				sprintf( __( 'server runs PHP %s', 'airworthy' ), scan.host_php ),
+			].filter( Boolean ).join( ' · ' ),
+			'',
+			overall,
+		];
+
+		resultGroups( scan, components ).forEach(
+			function ( g ) {
+				lines.push( '', g.title + ':' );
+				if ( 'good' === g.key ) {
+					var names = g.items.map(
+						function ( c ) {
+							return c.name;
+						}
+					);
+					lines.push( names.join( ', ' ) );
+					return;
+				}
+				g.items.forEach(
+					function ( c ) {
+						var notes = [];
+						if ( c.verdict && VERDICTS[ c.verdict ] ) {
+							notes.push( VERDICTS[ c.verdict ].label );
+						}
+						if ( c.update ) {
+							/* translators: %s: version number. */
+							notes.push( sprintf( __( 'update available: %s', 'airworthy' ), c.update.version ) );
+						}
+						if ( c.wporg && 'closed' === c.wporg.status ) {
+							notes.push( __( 'removed from WordPress.org', 'airworthy' ) );
+						} else if ( c.wporg && c.wporg.abandoned ) {
+							notes.push( __( 'looks abandoned', 'airworthy' ) );
+						}
+						if ( c.wporg && c.wporg.requires_php_blocker ) {
+							/* translators: %s: PHP version. */
+							notes.push( sprintf( __( 'requires PHP %s', 'airworthy' ), c.wporg.requires_php ) );
+						}
+						lines.push( '- ' + c.name + ( c.version ? ' ' + c.version : '' ) + ( notes.length ? ' (' + notes.join( ', ' ) + ')' : '' ) );
+					}
+				);
+			}
+		);
+
+		lines.push(
+			'',
+			__( 'Airworthy reads the code without running it, so test the new PHP version on a staging copy before switching the live site.', 'airworthy' ),
+			/* translators: %s: link to Airworthy on WordPress.org. */
+			sprintf( __( 'Checked with Airworthy (free): %s', 'airworthy' ), config.pluginUrl || 'https://wordpress.org/plugins/airworthy/' )
+		);
+		return lines.join( '\n' );
+	}
+
+	/**
+	 * Copies the summary, and says so on the button for a moment. Falls back to a hidden text
+	 * box where the clipboard API isn't available (admin screens served over plain http).
+	 */
+	function copySummary( scan, components, button ) {
+		var text     = summaryText( scan, components );
+		var done     = function () {
+			var label          = button.textContent;
+			button.textContent = __( 'Copied', 'airworthy' );
+			announce( __( 'Summary copied. Paste it into an email or support ticket.', 'airworthy' ) );
+			setTimeout(
+				function () {
+					button.textContent = label;
+				},
+				2500
+			);
+		};
+		var fallback = function () {
+			var box   = el( 'textarea', { class: 'screen-reader-text', readonly: 'readonly' } );
+			box.value = text;
+			document.body.appendChild( box );
+			box.select();
+			var ok = false;
+			try {
+				ok = document.execCommand( 'copy' );
+			} catch ( e ) {
+				ok = false;
+			}
+			document.body.removeChild( box );
+			if ( ok ) {
+				done();
+			} else {
+				window.prompt( __( 'Copy the summary:', 'airworthy' ), text );
+			}
+		};
+		if ( navigator.clipboard && window.isSecureContext ) {
+			navigator.clipboard.writeText( text ).then( done, fallback );
+		} else {
+			fallback();
+		}
+	}
+
+	/**
+	 * "Did Airworthy help?" below the results of a finished scan. Asked once per user: Leave a
+	 * review and Don't ask again end it, Maybe later asks again in 30 days.
+	 */
+	function reviewCard() {
+		var card   = null;
+		var answer = function ( choice ) {
+			config.review = null; // Not again on this page.
+			if ( card && card.parentNode ) {
+				card.parentNode.removeChild( card );
+			}
+			apiFetch( { path: REST + '/review', method: 'POST', data: { choice: choice } } ).catch( function () {} );
+			if ( 'done' !== choice ) {
+				announce( __( 'Thanks. Airworthy won\'t ask again for now.', 'airworthy' ) );
+			}
+		};
+		card       = el(
+			'div',
+			{ class: 'airworthy-card airworthy-review' },
+			el( 'h3', null, __( 'Did Airworthy help?', 'airworthy' ) ),
+			el( 'p', null, __( 'Airworthy is free. A short review on WordPress.org helps other site owners find it before their own PHP upgrade, and takes about a minute.', 'airworthy' ) ),
+			el(
+				'p',
+				{ class: 'airworthy-review-actions' },
+				el(
+					'a',
+					{ class: 'button button-primary', href: config.review.url, target: '_blank', rel: 'noopener', onclick: function () {
+						answer( 'done' );
+					} },
+					__( 'Leave a review', 'airworthy' ),
+					el( 'span', { class: 'screen-reader-text' }, __( '(opens in a new tab)', 'airworthy' ) )
+				),
+				el(
+					'button',
+					{ type: 'button', class: 'button-link', onclick: function () {
+						answer( 'later' );
+					} },
+					__( 'Maybe later', 'airworthy' )
+				),
+				el(
+					'button',
+					{ type: 'button', class: 'button-link', onclick: function () {
+						answer( 'never' );
+					} },
+					__( 'Don\'t ask again', 'airworthy' )
+				)
+			)
+		);
+		return card;
 	}
 
 	function wporgPending( scan ) {

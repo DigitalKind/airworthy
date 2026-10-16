@@ -81,6 +81,8 @@ final class Page {
 					'rest'           => '/airworthy/v1',
 					'cronDisabled'   => defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON,
 					'resultsActions' => self::results_actions(),
+					'review'         => Review::config(),
+					'pluginUrl'      => 'https://wordpress.org/plugins/airworthy/',
 				)
 			) . ';',
 			'before'

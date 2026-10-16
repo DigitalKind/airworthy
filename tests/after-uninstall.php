@@ -19,6 +19,9 @@ if ( is_multisite() ) {
 		$left[] = "network option $name";
 	}
 }
+foreach ( (array) $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT meta_key FROM {$wpdb->usermeta} WHERE meta_key LIKE %s", $like ) ) as $name ) {
+	$left[] = "user meta $name";
+}
 $as_table = $wpdb->prefix . 'actionscheduler_actions';
 if ( $as_table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $as_table ) ) ) {
 	$jobs = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$as_table} WHERE hook LIKE %s AND status = 'pending'", $like ) ); // phpcs:ignore
@@ -36,4 +39,4 @@ if ( $left ) {
 	echo 'FAIL Uninstall left: ' . implode( ', ', $left ) . "\n";
 	exit( 1 );
 }
-echo "PASS Uninstall removed all tables, options, transients and scheduled jobs\n";
+echo "PASS Uninstall removed all tables, options, user meta, transients and scheduled jobs\n";

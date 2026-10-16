@@ -37,7 +37,7 @@ final class Targets {
 	);
 
 	/** When SECURITY_UNTIL was last checked against php.net. */
-	const TABLE_CHECKED = '2026-09-29';
+	const TABLE_CHECKED = '2026-10-16';
 
 	/**
 	 * Whether a target is supported.

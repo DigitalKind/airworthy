@@ -2,14 +2,14 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Airworthy – PHP Compatibility & Upgrade Checker 1.0.0\n"
+"Project-Id-Version: Airworthy – PHP Compatibility & Upgrade Checker 1.0.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/airworthy\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-30T21:56:00+00:00\n"
+"POT-Creation-Date: 2026-10-16T19:48:21+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: airworthy\n"
@@ -52,7 +52,7 @@ msgid "Sorry, you are not allowed to do that."
 msgstr ""
 
 #: src/Admin/Export.php:69
-#: src/Rest/Controller.php:575
+#: src/Rest/Controller.php:592
 #: src/Scan/Queue.php:159
 #: src/Scan/Queue.php:178
 #: src/Scan/Queue.php:347
@@ -96,90 +96,90 @@ msgid "Airworthy: PHP Upgrade Check"
 msgstr ""
 
 #: src/Admin/Page.php:56
-#: src/Admin/Page.php:245
+#: src/Admin/Page.php:247
 msgid "Airworthy"
 msgstr ""
 
 #. translators: 1: PHP version, 2: date security support ended.
-#: src/Admin/Page.php:162
+#: src/Admin/Page.php:164
 #, php-format
 msgid "PHP %1$s (security fixes ended %2$s)"
 msgstr ""
 
 #. translators: 1: PHP version, 2: date security support ends.
-#: src/Admin/Page.php:165
+#: src/Admin/Page.php:167
 #, php-format
 msgid "PHP %1$s (security fixes until %2$s)"
 msgstr ""
 
 #. translators: %s: PHP version.
-#: src/Admin/Page.php:168
-#: src/Admin/Page.php:363
+#: src/Admin/Page.php:170
+#: src/Admin/Page.php:365
 #, php-format
 msgid "PHP %s"
 msgstr ""
 
-#: src/Admin/Page.php:170
+#: src/Admin/Page.php:172
 msgid "– recommended"
 msgstr ""
 
-#: src/Admin/Page.php:183
+#: src/Admin/Page.php:185
 msgid "Your server already runs the newest PHP version Airworthy can check."
 msgstr ""
 
 #. translators: %s: PHP version.
-#: src/Admin/Page.php:194
+#: src/Admin/Page.php:196
 #, php-format
 msgid "PHP %s is recommended: it is the oldest version that still gets security fixes, so it is the smallest upgrade that keeps your site protected. Pick a newer version to plan further ahead."
 msgstr ""
 
 #. translators: %s: PHP version.
-#: src/Admin/Page.php:197
+#: src/Admin/Page.php:199
 #, php-format
 msgid "PHP %s is recommended: it is the next version up from your server's that still gets security fixes. Pick a newer version to plan further ahead."
 msgstr ""
 
-#: src/Admin/Page.php:206
+#: src/Admin/Page.php:208
 msgid "Sorry, you are not allowed to access this page."
 msgstr ""
 
-#: src/Admin/Page.php:241
+#: src/Admin/Page.php:243
 msgid "Before you upgrade PHP, see which plugins and themes are ready, which need fixing, and what to do next."
 msgstr ""
 
-#: src/Admin/Page.php:246
+#: src/Admin/Page.php:248
 msgid "Scan"
 msgstr ""
 
-#: src/Admin/Page.php:247
-#: src/Admin/Page.php:427
+#: src/Admin/Page.php:249
+#: src/Admin/Page.php:429
 msgid "Settings"
 msgstr ""
 
-#: src/Admin/Page.php:269
+#: src/Admin/Page.php:271
 msgid "Airworthy needs JavaScript to run scans and show results."
 msgstr ""
 
-#: src/Admin/Page.php:272
+#: src/Admin/Page.php:274
 msgid "Check your plugins and theme"
 msgstr ""
 
-#: src/Admin/Page.php:274
+#: src/Admin/Page.php:276
 msgid "Server PHP version"
 msgstr ""
 
-#: src/Admin/Page.php:282
+#: src/Admin/Page.php:284
 msgid "Will be scanned"
 msgstr ""
 
 #. translators: 1: number of plugins, 2: number of themes.
-#: src/Admin/Page.php:290
+#: src/Admin/Page.php:292
 #, php-format
 msgid "%1$s and %2$s"
 msgstr ""
 
 #. translators: %d: number of plugins.
-#: src/Admin/Page.php:292
+#: src/Admin/Page.php:294
 #, php-format
 msgid "%d plugin"
 msgid_plural "%d plugins"
@@ -187,7 +187,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of themes.
-#: src/Admin/Page.php:294
+#: src/Admin/Page.php:296
 #, php-format
 msgid "%d network-enabled theme (and any parent themes)"
 msgid_plural "%d network-enabled themes (and any parent themes)"
@@ -195,7 +195,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: number of plugins, 2: theme name.
-#: src/Admin/Page.php:301
+#: src/Admin/Page.php:303
 #, php-format
 msgid "%1$d active plugin and the active theme, %2$s"
 msgid_plural "%1$d active plugins and the active theme, %2$s"
@@ -203,84 +203,84 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: number of plugins, 2: theme name.
-#: src/Admin/Page.php:310
+#: src/Admin/Page.php:312
 #, php-format
 msgid "%1$d plugin (active and inactive) and the active theme, %2$s"
 msgid_plural "%1$d plugins (active and inactive) and the active theme, %2$s"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/Admin/Page.php:319
+#: src/Admin/Page.php:321
 msgid "Change"
 msgstr ""
 
-#: src/Admin/Page.php:323
+#: src/Admin/Page.php:325
 msgid "Time needed"
 msgstr ""
 
-#: src/Admin/Page.php:324
+#: src/Admin/Page.php:326
 #: assets/admin.js:666
 msgid "Working it out…"
 msgstr ""
 
-#: src/Admin/Page.php:327
+#: src/Admin/Page.php:329
 msgid "Airworthy only reads files. It never changes your site, your plugins or your server. The results help you plan but are not a guarantee: always back up your site and test on a staging copy before you change your PHP version."
 msgstr ""
 
-#: src/Admin/Page.php:332
+#: src/Admin/Page.php:334
 msgid "Also check WordPress.org?"
 msgstr ""
 
-#: src/Admin/Page.php:333
+#: src/Admin/Page.php:335
 msgid "This finds plugins that were removed from WordPress.org, look abandoned, or need a newer PHP version. Airworthy sends each plugin's folder name to WordPress.org, and nothing else: not your site's address, not your PHP version."
 msgstr ""
 
-#: src/Admin/Page.php:334
+#: src/Admin/Page.php:336
 msgid "Yes, check WordPress.org"
 msgstr ""
 
-#: src/Admin/Page.php:335
+#: src/Admin/Page.php:337
 msgid "No, only scan the files"
 msgstr ""
 
-#: src/Admin/Page.php:337
+#: src/Admin/Page.php:339
 msgid "Check against PHP"
 msgstr ""
 
-#: src/Admin/Page.php:343
+#: src/Admin/Page.php:345
 msgid "Start scan"
 msgstr ""
 
-#: src/Admin/Page.php:344
+#: src/Admin/Page.php:346
 msgid "Back to results"
 msgstr ""
 
-#: src/Admin/Page.php:348
+#: src/Admin/Page.php:350
 msgid "Compare from another PHP version"
 msgstr ""
 
-#: src/Admin/Page.php:349
+#: src/Admin/Page.php:351
 msgid "Your site runs PHP"
 msgstr ""
 
 #. translators: %s: PHP version.
-#: src/Admin/Page.php:361
+#: src/Admin/Page.php:363
 #, php-format
 msgid "PHP %s (this server)"
 msgstr ""
 
-#: src/Admin/Page.php:369
+#: src/Admin/Page.php:371
 msgid "Problems from PHP changes up to this version already apply to your site today, so they aren't counted as Blockers. Change it when you check a copy of a site that runs on another server."
 msgstr ""
 
 #. translators: 1: chosen PHP version, 2: recommended PHP version.
-#: src/Admin/Page.php:372
+#: src/Admin/Page.php:374
 #, php-format
 msgid "PHP %1$s no longer gets security fixes, and results for unsupported versions are less precise. We recommend PHP %2$s instead."
 msgstr ""
 
 #. translators: %d: number of plugins.
-#: src/Admin/Page.php:393
+#: src/Admin/Page.php:395
 #, php-format
 msgid "%d inactive plugin"
 msgid_plural "%d inactive plugins"
@@ -288,7 +288,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of plugins and themes.
-#: src/Admin/Page.php:397
+#: src/Admin/Page.php:399
 #, php-format
 msgid "%d ignored plugin or theme"
 msgid_plural "%d ignored plugins and themes"
@@ -296,82 +296,86 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: e.g. "5 inactive plugins and 2 ignored plugins and themes".
-#: src/Admin/Page.php:400
+#: src/Admin/Page.php:402
 #, php-format
 msgid "Left out by your settings: %s."
 msgstr ""
 
 #. translators: %s: e.g. "5 inactive plugins and 2 ignored plugins and themes".
-#: src/Admin/Page.php:400
+#: src/Admin/Page.php:402
 msgid " and "
 msgstr ""
 
-#: src/Admin/Page.php:416
+#: src/Admin/Page.php:418
 msgid "Gentle"
 msgstr ""
 
-#: src/Admin/Page.php:416
+#: src/Admin/Page.php:418
 msgid "Short batches with pauses in between. Takes longer; easiest on cheap shared hosting."
 msgstr ""
 
-#: src/Admin/Page.php:417
+#: src/Admin/Page.php:419
 msgid "Normal (recommended)"
 msgstr ""
 
-#: src/Admin/Page.php:417
+#: src/Admin/Page.php:419
 msgid "Batches of up to 20 seconds, one after another."
 msgstr ""
 
-#: src/Admin/Page.php:418
+#: src/Admin/Page.php:420
 msgid "Fast"
 msgstr ""
 
-#: src/Admin/Page.php:418
+#: src/Admin/Page.php:420
 msgid "Longer batches, for servers with room to spare. Still stops well before your server's time limit."
 msgstr ""
 
-#: src/Admin/Page.php:430
+#: src/Admin/Page.php:432
 msgid "Changes save as you make them, and apply from your next scan."
 msgstr ""
 
-#: src/Admin/Page.php:432
+#: src/Admin/Page.php:434
 msgid "Settings saved. They apply from your next scan."
 msgstr ""
 
-#: src/Admin/Page.php:436
+#: src/Admin/Page.php:438
 msgid "Scan speed"
 msgstr ""
 
-#: src/Admin/Page.php:446
+#: src/Admin/Page.php:448
 msgid "Inactive plugins"
 msgstr ""
 
-#: src/Admin/Page.php:449
+#: src/Admin/Page.php:451
 msgid "Skip inactive plugins"
 msgstr ""
 
-#: src/Admin/Page.php:449
+#: src/Admin/Page.php:451
 msgid "Inactive plugins don't run, so they can't break your site today. They would if you turned them back on, though, and their files stay on your server. If you don't use a plugin, deleting it is better than skipping it."
 msgstr ""
 
-#: src/Admin/Page.php:454
+#: src/Admin/Page.php:456
 msgid "Never check these"
 msgstr ""
 
-#: src/Admin/Page.php:455
+#: src/Admin/Page.php:457
 msgid "For code you look after yourself, or are about to remove. Ignored plugins and themes aren't checked, and aren't looked up on WordPress.org."
 msgstr ""
 
-#: src/Admin/Page.php:464
+#: src/Admin/Page.php:466
 msgid "· theme"
 msgstr ""
 
-#: src/Admin/Page.php:466
+#: src/Admin/Page.php:468
 msgid "· inactive"
 msgstr ""
 
-#: src/Admin/Page.php:474
+#: src/Admin/Page.php:476
 msgid "Save settings"
+msgstr ""
+
+#: src/Admin/Review.php:83
+msgid "Unknown answer."
 msgstr ""
 
 #: src/Admin/SiteHealth.php:45
@@ -468,7 +472,11 @@ msgstr ""
 msgid "Whether to look plugins up on WordPress.org (sends their folder names). Saved as the site's choice. Default: the saved choice, off if none."
 msgstr ""
 
-#: src/Rest/Controller.php:555
+#: src/Rest/Controller.php:233
+msgid "The user's answer to the review request: done, later or never."
+msgstr ""
+
+#: src/Rest/Controller.php:572
 msgid "The scan could not be completed. Try again, or ask your host whether background tasks (WP-Cron) are working."
 msgstr ""
 
@@ -752,7 +760,7 @@ msgid "Checking now"
 msgstr ""
 
 #: assets/admin.js:564
-#: assets/admin.js:1465
+#: assets/admin.js:1472
 msgid "What the verdicts mean"
 msgstr ""
 
@@ -1192,7 +1200,7 @@ msgstr ""
 #: assets/admin.js:1125
 #: assets/admin.js:1185
 #: assets/admin.js:1198
-#: assets/admin.js:1525
+#: assets/admin.js:1532
 msgid "Plugin or theme"
 msgstr ""
 
@@ -1211,7 +1219,7 @@ msgid "inactive"
 msgstr ""
 
 #: assets/admin.js:1137
-#: assets/admin.js:1526
+#: assets/admin.js:1533
 msgid "Verdict"
 msgstr ""
 
@@ -1222,12 +1230,12 @@ msgid "Nothing new breaks on PHP %s. Some old code already can't run on your cur
 msgstr ""
 
 #: assets/admin.js:1149
-#: assets/admin.js:1527
+#: assets/admin.js:1534
 msgid "Findings"
 msgstr ""
 
 #: assets/admin.js:1150
-#: assets/admin.js:1528
+#: assets/admin.js:1535
 msgid "WordPress.org"
 msgstr ""
 
@@ -1267,6 +1275,7 @@ msgstr[1] ""
 
 #. translators: %s: PHP version.
 #: assets/admin.js:1259
+#: assets/admin.js:1580
 #, js-format
 msgid "Nothing found that would break on PHP %s, but some files could not be checked."
 msgstr ""
@@ -1421,60 +1430,170 @@ msgstr ""
 msgid "Export CSV"
 msgstr ""
 
-#: assets/admin.js:1455
+#: assets/admin.js:1450
+msgid "Copy summary"
+msgstr ""
+
+#: assets/admin.js:1462
 msgid "New scan"
 msgstr ""
 
-#: assets/admin.js:1472
+#: assets/admin.js:1479
 msgid "Before you change your PHP version"
 msgstr ""
 
-#: assets/admin.js:1476
+#: assets/admin.js:1483
 msgid "Back up your whole site first: files and database."
 msgstr ""
 
-#: assets/admin.js:1477
+#: assets/admin.js:1484
 msgid "Try the new PHP version on a staging copy of your site before your live site, and click through what matters: checkout, forms, logins, bookings."
 msgstr ""
 
-#: assets/admin.js:1478
+#: assets/admin.js:1485
 msgid "Know how to switch back: most hosts let you change the PHP version back in their control panel."
 msgstr ""
 
-#: assets/admin.js:1480
+#: assets/admin.js:1487
 msgid "Airworthy reads your plugins’ code without running it, so it can’t catch everything: some problems only show up when code runs, or come from your server’s set-up. Use the results to plan your upgrade, not as a guarantee that your site will work."
 msgstr ""
 
 #. translators: %d: number of plugins.
-#: assets/admin.js:1490
+#: assets/admin.js:1497
 #, js-format
 msgid "%d plugin has been removed from WordPress.org"
 msgid_plural "%d plugins have been removed from WordPress.org"
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/admin.js:1492
+#: assets/admin.js:1499
 msgid "Nobody can download these from WordPress.org any more, and no more updates will come for them, including security fixes."
 msgstr ""
 
 #. translators: 1: date, 2: reason in plain words, e.g. "the author withdrew it".
-#: assets/admin.js:1504
+#: assets/admin.js:1511
 #, js-format
 msgid "closed %1$s: %2$s."
 msgstr ""
 
-#: assets/admin.js:1518
+#: assets/admin.js:1525
 msgid "Results by plugin or theme, grouped by what to do next"
 msgstr ""
 
-#: assets/admin.js:1529
+#: assets/admin.js:1536
 msgid "Actions"
 msgstr ""
 
-#: assets/admin.js:1536
+#: assets/admin.js:1543
 msgid "No plugins or themes were checked in this scan."
 msgstr ""
 
-#: assets/admin.js:1588
+#: assets/admin.js:1574
+msgid "The scan was stopped before it finished, so these results are incomplete."
+msgstr ""
+
+#. translators: 1: number of plugins/themes, 2: PHP version.
+#: assets/admin.js:1577
+#, js-format
+msgid "%1$d plugin or theme needs attention before the upgrade to PHP %2$s."
+msgid_plural "%1$d plugins or themes need attention before the upgrade to PHP %2$s."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %s: PHP version.
+#: assets/admin.js:1582
+#, js-format
+msgid "Nothing found that would break on PHP %s."
+msgstr ""
+
+#. translators: %s: PHP version.
+#: assets/admin.js:1586
+#, js-format
+msgid "Airworthy check for PHP %s"
+msgstr ""
+
+#. translators: %s: date and time.
+#: assets/admin.js:1589
+#, js-format
+msgid "Checked %s"
+msgstr ""
+
+#. translators: %s: PHP version.
+#: assets/admin.js:1591
+#, js-format
+msgid "server runs PHP %s"
+msgstr ""
+
+#. translators: %s: version number.
+#: assets/admin.js:1617
+#, js-format
+msgid "update available: %s"
+msgstr ""
+
+#: assets/admin.js:1620
+msgid "removed from WordPress.org"
+msgstr ""
+
+#: assets/admin.js:1622
+msgid "looks abandoned"
+msgstr ""
+
+#. translators: %s: PHP version.
+#: assets/admin.js:1626
+#, js-format
+msgid "requires PHP %s"
+msgstr ""
+
+#: assets/admin.js:1636
+msgid "Airworthy reads the code without running it, so test the new PHP version on a staging copy before switching the live site."
+msgstr ""
+
+#. translators: %s: link to Airworthy on WordPress.org.
+#: assets/admin.js:1638
+#, js-format
+msgid "Checked with Airworthy (free): %s"
+msgstr ""
+
+#: assets/admin.js:1651
+msgid "Copied"
+msgstr ""
+
+#: assets/admin.js:1652
+msgid "Summary copied. Paste it into an email or support ticket."
+msgstr ""
+
+#: assets/admin.js:1675
+msgid "Copy the summary:"
+msgstr ""
+
+#: assets/admin.js:1698
+msgid "Thanks. Airworthy won't ask again for now."
+msgstr ""
+
+#: assets/admin.js:1704
+msgid "Did Airworthy help?"
+msgstr ""
+
+#: assets/admin.js:1705
+msgid "Airworthy is free. A short review on WordPress.org helps other site owners find it before their own PHP upgrade, and takes about a minute."
+msgstr ""
+
+#: assets/admin.js:1714
+msgid "Leave a review"
+msgstr ""
+
+#: assets/admin.js:1715
+msgid "(opens in a new tab)"
+msgstr ""
+
+#: assets/admin.js:1722
+msgid "Maybe later"
+msgstr ""
+
+#: assets/admin.js:1729
+msgid "Don't ask again"
+msgstr ""
+
+#: assets/admin.js:1771
 msgid "WordPress.org details added."
 msgstr ""

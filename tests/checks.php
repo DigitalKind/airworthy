@@ -145,6 +145,7 @@ $routes = array(
 	array( 'POST', "/scans/$scan_id/components/$comp_id/rescan" ),
 	array( 'GET', '/estimate' ),
 	array( 'GET', "/scans/$scan_id/unchecked" ),
+	array( 'POST', '/review', array( 'choice' => 'later' ) ),
 );
 
 $editor_id = username_exists( 'airworthy_test_editor' );
@@ -195,6 +196,21 @@ $check( 'REST: administrators can read results', 200 === $status, (string) $stat
 list( $status, $data ) = $call( 'GET', "/scans/$scan_id/components/$comp_id/issues" );
 $paths = wp_json_encode( $data );
 $check( 'REST: findings list relative paths only', 200 === $status && false === strpos( $paths, WP_CONTENT_DIR ) && false === strpos( $paths, ABSPATH ), substr( $paths, 0, 200 ) );
+
+// The review request: asked once per user; Maybe later waits 30 days, the others end it.
+$review = \Airworthy\Admin\Review::class;
+delete_user_meta( $admin_id, $review::META );
+$check( 'Review: asked when the user has never answered', $review::should_ask() && is_array( $review::config() ) );
+list( $status ) = $call( 'POST', '/review', array( 'choice' => 'later' ) );
+$later          = (int) get_user_meta( $admin_id, $review::META, true );
+$check( 'Review: Maybe later waits about 30 days', 200 === $status && ! $review::should_ask() && abs( $later - ( time() + 30 * DAY_IN_SECONDS ) ) < 60, "$status $later" );
+update_user_meta( $admin_id, $review::META, (string) ( time() - 1 ) );
+$check( 'Review: asked again once the 30 days are up', $review::should_ask() );
+list( $status ) = $call( 'POST', '/review', array( 'choice' => 'never' ) );
+$check( 'Review: Don\'t ask again ends it', 200 === $status && ! $review::should_ask() && null === $review::config() );
+list( $status ) = $call( 'POST', '/review', array( 'choice' => 'five-stars' ) );
+$check( 'Review: unknown answers are refused', 400 === $status, (string) $status );
+delete_user_meta( $admin_id, $review::META );
 
 // The findings list and its filters, against counts taken straight from the table.
 $in_table = static function ( $where ) use ( $wpdb, $t, $scan_id, $comp_id ) {

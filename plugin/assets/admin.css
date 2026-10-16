@@ -1199,3 +1199,24 @@
 	background: linear-gradient(135deg, #2f74e8, #1747a6);
 	box-shadow: 0 1px 2px rgba(23, 71, 166, 0.3);
 }
+
+/* "Did Airworthy help?" below a finished scan's results. */
+
+.airworthy-wrap .airworthy-review {
+	border-left: 4px solid #2f74e8;
+}
+
+.airworthy-review p {
+	max-width: 46rem;
+}
+
+.airworthy-review-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	align-items: center;
+}
+
+.airworthy-head-actions {
+	flex-wrap: wrap;
+}

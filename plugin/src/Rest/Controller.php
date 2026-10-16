@@ -218,6 +218,23 @@ final class Controller {
 				'args'                => array( 'id' => $id ),
 			)
 		);
+		register_rest_route(
+			$ns,
+			'/review',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( \Airworthy\Admin\Review::class, 'rest_answer' ),
+				'permission_callback' => $can,
+				'args'                => array(
+					'choice' => array(
+						'required'    => true,
+						'type'        => 'string',
+						'enum'        => \Airworthy\Admin\Review::CHOICES,
+						'description' => __( 'The user\'s answer to the review request: done, later or never.', 'airworthy' ),
+					),
+				),
+			)
+		);
 	}
 
 	/**

@@ -4,7 +4,7 @@ Tags: php compatibility, php upgrade, php version, php 8, compatibility
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.2
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,16 +21,20 @@ Airworthy reads the code of every installed plugin and of your theme (on multisi
 = What you get =
 
 * **A verdict for every plugin and theme.** Blocker, Unknown, Suppressed, Guarded, Warnings or Ready, each with one plain sentence explaining what it means for you.
-* **Fewer false alarms.** Many plugins carry old code that only runs on old PHP versions, behind a version check. Airworthy recognises those checks and marks that code as guarded instead of broken. In our test of the 30 most popular plugins, this cut the plugins flagged as broken from 4 to 2, and in both the flagged code really would fail on PHP 8.
+* **Fewer false alarms.** Many plugins carry old code that only runs on old PHP versions, behind a version check. Airworthy recognises those checks and marks that code as guarded instead of broken. In our test of the 30 most popular plugins, this cut the plugins flagged as broken from 4 to 2, and both of those contain code that really would fail on PHP 8.
 * **Maintenance signals from WordPress.org (if you allow it).** Plugins that were closed (removed from the directory), not updated in two years, not tested with recent WordPress versions, or that need a newer PHP version than you picked are called out.
 * **Know what to do next.** Results are grouped into fix before you upgrade, keep an eye on, and all good. Plugins with an update waiting say so, with a one-click update, and Airworthy checks them again once they're updated.
 * **Know how long you have.** Airworthy shows when your server's PHP version stops getting security fixes, so you can plan the upgrade before it's urgent.
-* **The details when you want them.** Every finding shows the file, the line and what changed in PHP. Filter by verdict, rescan one plugin after an update, or download everything as a CSV file for your developer or host.
+* **The details when you want them.** Every finding shows the file, the line and what changed in PHP. Filter by verdict, rescan one plugin after an update, copy a plain-text summary to paste into an email or support ticket, or download everything as a CSV file for your developer or host.
 * **Sensible default.** Airworthy recommends the oldest PHP version that still gets security fixes: the smallest upgrade that keeps your site protected. It shows every version's support dates.
 * **Safe on any host.** Scans run in the background in short batches, so they never time out, and they watch memory use. You can leave the page while a scan runs. Nothing is changed on your site.
 * **Settings that fit your site.** Skip inactive plugins, keep a list of plugins and themes never to check, and choose a gentler scan speed for cheap shared hosting.
 * **In Site Health too.** Tools > Site Health shows whether your plugins and themes are ready for the next PHP version, with a link to the full results.
 * **Multisite ready.** On a network, Airworthy is activated network-wide and lives under Network Admin > Settings.
+
+= For freelancers and agencies =
+
+Hosts are moving sites off old PHP versions, and every client asks the same question: will my site break? Install Airworthy on each client site before the host's deadline (it's free, on as many sites as you like), and you have an answer per plugin in minutes. Copy summary gives you a plain-text list to paste into the client email or the host's support ticket, the CSV has every finding for your developer, and the Site Health check keeps showing whether the site is ready for the next PHP version. For many sites at once, use WP-CLI.
 
 = WP-CLI =
 
@@ -135,6 +139,10 @@ PHP 8.0, 8.1, 8.2, 8.3, 8.4 and 8.5. Versions that no longer get security fixes 
 
 That menu comes from Action Scheduler, the background-job library Airworthy uses (WooCommerce uses the same one). It's harmless, and lists Airworthy's jobs under the "airworthy" group.
 
+= Can I use Airworthy on client sites? =
+
+Yes. Airworthy is free and GPL-licensed, with no limit on sites and no account. Agencies often run it from WP-CLI (`wp airworthy scan --target=8.4 --fail-on=blocker`) across all their sites, and use Copy summary or the CSV export for each client.
+
 = How do I report a security problem? =
 
 Email security@airworthywp.com. Please don't post it in the public support forum. See SECURITY.md in the source repository for how reports are handled.
@@ -147,8 +155,15 @@ Email security@airworthywp.com. Please don't post it in the public support forum
 4. Results grouped by what to do next. Details show each finding with its file, line and what changed in PHP, and updates are one click away.
 5. Settings: skip inactive plugins, never check chosen plugins or themes, and pick a scan speed that suits your hosting. Changes save as you make them.
 6. A PHP upgrade check in Tools > Site Health, next to WordPress's own checks.
+7. The same check from WP-CLI, for agencies looking after many sites.
 
 == Changelog ==
+
+= 1.0.1 =
+* New: Copy summary, next to Export CSV on the results. Copies a plain-text summary (the overall answer, then each plugin and theme grouped by what to do next, with updates waiting and closed plugins) to paste into an email or support ticket for your host or developer.
+* New: after a finished scan, the results ask once whether you'd leave a review on WordPress.org. Maybe later asks again in 30 days; Don't ask again means never. It only appears on Airworthy's own screen, below the results.
+* PHP support dates checked against php.net on 16 October 2026: PHP 8.2 gets security fixes until 31 December 2026.
+* WP-CLI: the note about problems that already apply on your current PHP version now says how to list them (`wp airworthy results --fields=name,verdict,existing`); it pointed to a column the scan table doesn't show.
 
 = 1.0.0 =
 * First release.
@@ -165,6 +180,9 @@ Email security@airworthywp.com. Please don't post it in the public support forum
 * CSV export and WP-CLI commands.
 
 == Upgrade Notice ==
+
+= 1.0.1 =
+Adds Copy summary on the results, for sending to your host or developer.
 
 = 1.0.0 =
 First release.
