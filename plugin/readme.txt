@@ -4,7 +4,7 @@ Tags: php compatibility, php upgrade, php version, php 8, compatibility
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.2
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -159,6 +159,9 @@ Email security@airworthywp.com. Please don't post it in the public support forum
 
 == Changelog ==
 
+= 1.0.2 =
+* Fix: code that fails on every PHP version, such as `$this` inside a static closure (found in the latest version of a widely used plugin), is now listed as a problem that already applies on your current PHP, not as a Blocker for the upgrade. It isn't caused by changing PHP, so it shouldn't hold the upgrade back.
+
 = 1.0.1 =
 * New: Copy summary, next to Export CSV on the results. Copies a plain-text summary (the overall answer, then each plugin and theme grouped by what to do next, with updates waiting and closed plugins) to paste into an email or support ticket for your host or developer.
 * New: after a finished scan, the results ask once whether you'd leave a review on WordPress.org. Maybe later asks again in 30 days; Don't ask again means never. It only appears on Airworthy's own screen, below the results.
@@ -180,6 +183,9 @@ Email security@airworthywp.com. Please don't post it in the public support forum
 * CSV export and WP-CLI commands.
 
 == Upgrade Notice ==
+
+= 1.0.2 =
+Code that fails on every PHP version is no longer counted as a Blocker for the upgrade.
 
 = 1.0.1 =
 Adds Copy summary on the results, for sending to your host or developer.

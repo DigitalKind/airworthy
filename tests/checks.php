@@ -59,6 +59,8 @@ foreach ( $versions as $message => $want ) {
 $check( 'Already applies: removed in 8.0, compared from 8.3', \Airworthy\Scan\Queue::already_applies( 'removed since PHP 8.0', '8.3' ) );
 $check( 'Not yet: removed in 8.4, compared from 8.3', ! \Airworthy\Scan\Queue::already_applies( 'removed since PHP 8.4', '8.3' ) );
 $check( 'Unknown version counts as new', ! \Airworthy\Scan\Queue::already_applies( 'no version here', '8.3' ) );
+$check( 'Always fails ($this in a static closure): already applies', \Airworthy\Scan\Queue::already_applies( 'Closures / anonymous functions declared as static do not have access to $this', '8.3', 'PHPCompatibility.FunctionDeclarations.NewClosure.ThisFoundInStatic' ) );
+$check( 'Always fails, but no version compared from: still counted', ! \Airworthy\Scan\Queue::already_applies( 'Closures / anonymous functions declared as static do not have access to $this', '', 'PHPCompatibility.FunctionDeclarations.NewClosure.ThisFoundInStatic' ) );
 
 // --- Settings: skip inactive plugins, ignore list, scan speed.
 $saved = get_site_option( 'airworthy_settings', null );

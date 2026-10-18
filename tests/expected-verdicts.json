@@ -36,6 +36,9 @@
 		"fx-implode": {
 			"*": "blocker"
 		},
+		"fx-static-this": {
+			"*": "ready"
+		},
 		"fx-data": {
 			"*": "ready"
 		},

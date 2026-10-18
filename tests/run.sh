@@ -84,6 +84,9 @@ wp airworthy scan --target=8.4 --only=fx-blocker-80 --no-wporg --from=8.0 --form
 V80=$(wp airworthy results --fields=verdict,existing --format=csv 2>/dev/null | tail -1)
 if [ "$V74" = "blocker,0" ]; then echo "PASS from 7.4: create_function (removed in 8.0) is a Blocker"; else echo "FAIL from 7.4: $V74"; FAILED=1; fi
 if [ "$V80" = "ready,1" ]; then echo "PASS from 8.0: the same code is already so on 8.0, not a Blocker"; else echo "FAIL from 8.0: $V80"; FAILED=1; fi
+wp airworthy scan --target=8.4 --only=fx-static-this --no-wporg --from=8.3 --format=summary > /dev/null 2>&1
+VST=$(wp airworthy results --fields=verdict,existing --format=csv 2>/dev/null | tail -1)
+if [ "$VST" = "ready,1" ]; then echo "PASS \$this in a static closure fails on every PHP: already applies, not a Blocker"; else echo "FAIL static closure: $VST"; FAILED=1; fi
 
 echo "==> WordPress.org lookups only with consent"
 # Clear cached answers too, so every lookup is a real (mocked) request and gets logged.

@@ -62,6 +62,18 @@ final class Queue {
 	const CONTEXT_EXISTING = 'existing';
 
 	/**
+	 * Errors that fail on every PHP version since the feature exists, so their message names no
+	 * version: rule code => the PHP version that introduced the feature. Without this they'd
+	 * count as new with the upgrade (the cautious answer for unknown versions), when the code
+	 * already fails on the site's current PHP. Example: $this used inside a static closure
+	 * throws an Error on every PHP version.
+	 */
+	const ALWAYS_FAILED = array(
+		'PHPCompatibility.FunctionDeclarations.NewClosure.ThisFoundInStatic' => '5.4',
+		'PHPCompatibility.Classes.NewLateStaticBinding.OutsideClassScope' => '5.3',
+	);
+
+	/**
 	 * PHP_CodeSniffer rules that report harmless behaviour notes, not failures: counted as
 	 * warnings. Self-closing tags in strip_tags()'s allowed list are only ignored (PHP 5.3.4+).
 	 */
@@ -703,7 +715,7 @@ final class Queue {
 			$issues[ $k ]['context'] = $classifier->classify( $issue );
 			// A removal that already applies on the PHP version the site runs now isn't caused by
 			// this upgrade: that code either never runs today or already fails today.
-			if ( 'error' === $issue['severity'] && in_array( $issues[ $k ]['context'], array( Classifier::PLAIN, Classifier::SUPPRESSED ), true ) && self::already_applies( $issue['message'], $state['from'] ) ) {
+			if ( 'error' === $issue['severity'] && in_array( $issues[ $k ]['context'], array( Classifier::PLAIN, Classifier::SUPPRESSED ), true ) && self::already_applies( $issue['message'], $state['from'], isset( $issue['rule'] ) ? (string) $issue['rule'] : '' ) ) {
 				$issues[ $k ]['context'] = self::CONTEXT_EXISTING;
 			}
 			if ( Classifier::OWN_CODE === $issues[ $k ]['context'] ) {
@@ -808,10 +820,11 @@ final class Queue {
 	 *
 	 * @param string $message Finding message.
 	 * @param string $from    "x.y", or '' when the scan has none (older scans).
+	 * @param string $rule    Rule code, for findings whose message names no version.
 	 * @return bool
 	 */
-	public static function already_applies( $message, $from ) {
-		$version = self::change_version( $message );
+	public static function already_applies( $message, $from, $rule = '' ) {
+		$version = isset( self::ALWAYS_FAILED[ $rule ] ) ? self::ALWAYS_FAILED[ $rule ] : self::change_version( $message );
 		return '' !== $from && null !== $version && version_compare( $version, $from, '<=' );
 	}
 
