@@ -269,6 +269,26 @@ $check( 'Site Health: passes on the newest PHP version', 'good' === $health['sta
 $health = \Airworthy\Admin\SiteHealth::run( '7.2.34' );
 $check( 'Site Health: gives a result for an older PHP version', in_array( $health['status'], array( 'good', 'recommended' ), true ) && '' !== $health['label'], $health['label'] );
 
+// PHP security releases: the server's PHP is missing the latest fixes (sample release data).
+$rel  = array(
+	'date'         => '2026-10-21',
+	'critical'     => true,
+	'fixed'        => array( '8.2' => '8.2.35', '8.3' => '8.3.36', '8.4' => '8.4.27', '8.5' => '8.5.12' ),
+	'eol_affected' => true,
+);
+$miss = Targets::missing_patch( '8.3.30', $rel );
+$check( 'Patch: 8.3.30 is missing the critical fixes in 8.3.36', $miss && 'missing' === $miss['level'] && '8.3.36' === $miss['fixed_in'] && $miss['critical'] && false !== strpos( $miss['text'], '8.3.36' ), wp_json_encode( $miss ) );
+$check( 'Patch: 8.3.36 and later have them', null === Targets::missing_patch( '8.3.36', $rel ) && null === Targets::missing_patch( '8.3.40', $rel ) );
+$old = Targets::missing_patch( '8.1.33', $rel );
+$check( 'Patch: 8.1 gets no fix, and says to move to a newer version', $old && 'unpatched' === $old['level'] && null === $old['fixed_in'], wp_json_encode( $old ) );
+$check( 'Patch: nothing said about 8.1 when old versions aren\'t affected', null === Targets::missing_patch( '8.1.33', array( 'eol_affected' => false ) + $rel ) );
+$check( 'Patch: nothing said without a known release or a full version number', null === Targets::missing_patch( '8.3.30', array( 'date' => '' ) + $rel ) && null === Targets::missing_patch( '8.3', $rel ) );
+$check( 'Patch: a newer PHP than the release covers says nothing', null === Targets::missing_patch( '8.6.0', $rel ) && ! \Airworthy\Admin\SiteHealth::knows_patch( '8.6.0', $rel ) );
+$ph = \Airworthy\Admin\SiteHealth::run_patch( '8.4.20', $rel );
+$check( 'Site Health: a missing critical fix is critical, with a red Security badge', 'critical' === $ph['status'] && 'red' === $ph['badge']['color'] && \Airworthy\Admin\SiteHealth::TEST_PATCH === $ph['test'], $ph['label'] );
+$ph = \Airworthy\Admin\SiteHealth::run_patch( '8.4.27', $rel );
+$check( 'Site Health: patched is good', 'good' === $ph['status'], $ph['label'] );
+
 wp_delete_user( (int) $editor_id );
 if ( isset( $site_admin ) ) {
 	wp_delete_user( (int) $site_admin );

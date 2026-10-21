@@ -1436,7 +1436,8 @@
 								/* translators: %s: server PHP version. */
 							sprintf( __( 'Server runs PHP %s', 'airworthy' ), scan.host_php )
 						),
-						scan.host_support ? el( 'p', { class : 'airworthy-support airworthy-support-' + scan.host_support.level }, scan.host_support.text ) : null
+						scan.host_support ? el( 'p', { class : 'airworthy-support airworthy-support-' + scan.host_support.level }, scan.host_support.text ) : null,
+						scan.host_patch ? el( 'p', { class : 'airworthy-support airworthy-support-ended airworthy-patch' }, scan.host_patch.text ) : null
 					),
 					el(
 						'div',

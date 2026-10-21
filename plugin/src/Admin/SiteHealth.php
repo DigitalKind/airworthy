@@ -27,6 +27,9 @@ final class SiteHealth {
 	/** Test key in the site_status_tests filter. */
 	const TEST = 'airworthy_php_upgrade';
 
+	/** Second test: the latest PHP security release (only while Airworthy knows of one). */
+	const TEST_PATCH = 'airworthy_php_security';
+
 	/**
 	 * Hooks the test.
 	 */
@@ -45,6 +48,12 @@ final class SiteHealth {
 			'label' => __( 'PHP upgrade readiness', 'airworthy' ),
 			'test'  => array( __CLASS__, 'run' ),
 		);
+		if ( self::knows_patch( \Airworthy\Env::php_version() ) ) {
+			$tests['direct'][ self::TEST_PATCH ] = array(
+				'label' => __( 'PHP security fixes', 'airworthy' ),
+				'test'  => array( __CLASS__, 'run_patch' ),
+			);
+		}
 		return $tests;
 	}
 
@@ -141,6 +150,60 @@ final class SiteHealth {
 	}
 
 	/**
+	 * Whether there's something to say about the server's PHP and the latest security release:
+	 * it's missing, or it's a version that release fixed.
+	 *
+	 * @param string     $php     Server PHP version.
+	 * @param array|null $release Release data (for tests); default Targets::SECURITY_RELEASE.
+	 * @return bool
+	 */
+	public static function knows_patch( $php, $release = null ) {
+		$release = is_array( $release ) ? $release : Targets::SECURITY_RELEASE;
+		return ! empty( $release['date'] ) && ( null !== Targets::missing_patch( $php, $release ) || isset( $release['fixed'][ Targets::minor( $php ) ] ) );
+	}
+
+	/**
+	 * The security-fixes test result.
+	 *
+	 * @param string|null $php     PHP version the site runs (for tests); default the server's.
+	 * @param array|null  $release Release data (for tests); default Targets::SECURITY_RELEASE.
+	 * @return array Site Health result.
+	 */
+	public static function run_patch( $php = null, $release = null ) {
+		$php     = null === $php ? \Airworthy\Env::php_version() : $php;
+		$release = is_array( $release ) ? $release : Targets::SECURITY_RELEASE;
+		$missing = Targets::missing_patch( $php, $release );
+		if ( $missing ) {
+			$result = self::result(
+				$missing['critical'] ? 'critical' : 'recommended',
+				'missing' === $missing['level'] ?
+					/* translators: %s: PHP version. */
+					sprintf( __( 'Your server\'s PHP %s is missing security fixes', 'airworthy' ), $php ) :
+					/* translators: %s: PHP version. */
+					sprintf( __( 'PHP %s no longer gets security fixes', 'airworthy' ), Targets::minor( $php ) ),
+				$missing['text'],
+				'missing' === $missing['level'] ? __( 'Open Airworthy', 'airworthy' ) : __( 'Check your plugins for a newer PHP version', 'airworthy' )
+			);
+		} else {
+			$date   = date_i18n( get_option( 'date_format' ), strtotime( $release['date'] . ' 12:00:00 UTC' ) );
+			$result = self::result(
+				'good',
+				/* translators: %s: PHP version. */
+				sprintf( __( 'PHP %s has the latest security fixes Airworthy knows of', 'airworthy' ), $php ),
+				/* translators: %s: date. */
+				sprintf( __( 'It includes the PHP security fixes released on %s.', 'airworthy' ), $date ),
+				__( 'Open Airworthy', 'airworthy' )
+			);
+		}
+		$result['test']  = self::TEST_PATCH;
+		$result['badge'] = array(
+			'label' => __( 'Security', 'airworthy' ),
+			'color' => 'good' === $result['status'] ? 'blue' : ( 'critical' === $result['status'] ? 'red' : 'orange' ),
+		);
+		return $result;
+	}
+
+	/**
 	 * The latest finished scan.
 	 *
 	 * @return object|null
@@ -156,7 +219,7 @@ final class SiteHealth {
 	/**
 	 * A Site Health result array.
 	 *
-	 * @param string $status      good | recommended.
+	 * @param string $status      good | recommended | critical.
 	 * @param string $label       Heading.
 	 * @param string $description One paragraph (plain text).
 	 * @param string $link_text   Link to the Airworthy screen (shown to users who can scan).

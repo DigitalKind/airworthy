@@ -4,7 +4,7 @@ Tags: php compatibility, php upgrade, php version, php 8, compatibility
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.2
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,6 +25,7 @@ Airworthy reads the code of every installed plugin and of your theme (on multisi
 * **Maintenance signals from WordPress.org (if you allow it).** Plugins that were closed (removed from the directory), not updated in two years, not tested with recent WordPress versions, or that need a newer PHP version than you picked are called out.
 * **Know what to do next.** Results are grouped into fix before you upgrade, keep an eye on, and all good. Plugins with an update waiting say so, with a one-click update, and Airworthy checks them again once they're updated.
 * **Know how long you have.** Airworthy shows when your server's PHP version stops getting security fixes, so you can plan the upgrade before it's urgent.
+* **Know when your PHP needs a security update.** If your server's PHP is missing the latest PHP security fixes, Airworthy says so on its screen and in Site Health, and tells you to ask your host to update (a routine update that doesn't change how your plugins work).
 * **The details when you want them.** Every finding shows the file, the line and what changed in PHP. Filter by verdict, rescan one plugin after an update, copy a plain-text summary to paste into an email or support ticket, or download everything as a CSV file for your developer or host.
 * **Sensible default.** Airworthy recommends the oldest PHP version that still gets security fixes: the smallest upgrade that keeps your site protected. It shows every version's support dates.
 * **Safe on any host.** Scans run in the background in short batches, so they never time out, and they watch memory use. You can leave the page while a scan runs. Nothing is changed on your site.
@@ -159,6 +160,10 @@ Email security@airworthywp.com. Please don't post it in the public support forum
 
 == Changelog ==
 
+= 1.0.3 =
+* New: a PHP security-fixes check on the start screen, in the results and in Tools > Site Health. Airworthy knows the PHP security release of 21 October 2026 (PHP 8.5.12, 8.4.27, 8.3.36 and 8.2.35, fixing two critical vulnerabilities, CVE-2026-109618 and CVE-2026-109619). If your server's PHP is older than those, it tells you to ask your host to update: an update within the same version is routine and doesn't change how your plugins work. PHP 8.1 and older got no release from the PHP project, so for those it says to ask your host whether they patched it and to move to a newer version. The data is bundled with the plugin; nothing is fetched.
+* PHP support dates checked against php.net on 21 October 2026: no change.
+
 = 1.0.2 =
 * Fix: code that fails on every PHP version, such as `$this` inside a static closure (found in the latest version of a widely used plugin), is now listed as a problem that already applies on your current PHP, not as a Blocker for the upgrade. It isn't caused by changing PHP, so it shouldn't hold the upgrade back.
 
@@ -183,6 +188,9 @@ Email security@airworthywp.com. Please don't post it in the public support forum
 * CSV export and WP-CLI commands.
 
 == Upgrade Notice ==
+
+= 1.0.3 =
+Tells you when your server's PHP is missing the critical PHP security fixes of 21 October 2026.
 
 = 1.0.2 =
 Code that fails on every PHP version is no longer counted as a Blocker for the upgrade.

@@ -1220,3 +1220,10 @@
 .airworthy-head-actions {
 	flex-wrap: wrap;
 }
+
+/* A PHP security release the server is missing (start screen and results header). */
+
+.airworthy-patch {
+	margin-top: 6px;
+	font-weight: 600;
+}

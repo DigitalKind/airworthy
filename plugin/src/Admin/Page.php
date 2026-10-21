@@ -280,6 +280,10 @@ final class Page {
 						<?php if ( $airworthy_support ) : ?>
 							<span class="airworthy-support airworthy-support-<?php echo esc_attr( $airworthy_support['level'] ); ?>"><?php echo esc_html( $airworthy_support['text'] ); ?></span>
 						<?php endif; ?>
+						<?php $airworthy_patch = Targets::missing_patch( $current ); ?>
+						<?php if ( $airworthy_patch ) : ?>
+							<span class="airworthy-support airworthy-support-ended airworthy-patch"><?php echo esc_html( $airworthy_patch['text'] ); ?></span>
+						<?php endif; ?>
 					</dd>
 					<dt><?php esc_html_e( 'Will be scanned', 'airworthy' ); ?></dt>
 					<dd>

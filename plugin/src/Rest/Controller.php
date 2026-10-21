@@ -548,6 +548,7 @@ final class Controller {
 			'target_php'   => $s->target_php,
 			'host_php'     => $s->host_php,
 			'host_support' => Targets::support_status( \Airworthy\Env::php_version() ), // The server now, not when scanned.
+			'host_patch'   => Targets::missing_patch( \Airworthy\Env::php_version() ), // Security release missing on the server now.
 			'from_php'     => isset( $s->from_php ) && '' !== $s->from_php ? $s->from_php : null,
 			'status'       => $s->status,
 			'resumable'    => Queue::can_resume( $s ),
