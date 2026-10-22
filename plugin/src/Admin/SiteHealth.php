@@ -168,15 +168,14 @@ final class SiteHealth {
 
 	/**
 	 * Whether there's something to say about the server's PHP and the latest security release:
-	 * it's missing, or it's a version that release fixed.
+	 * it has the fixes, very likely has them, is missing them, or is a version that gets none.
 	 *
 	 * @param string     $php     Server PHP version.
 	 * @param array|null $release Release data (for tests); default Targets::SECURITY_RELEASE.
 	 * @return bool
 	 */
 	public static function knows_patch( $php, $release = null ) {
-		$release = is_array( $release ) ? $release : Targets::SECURITY_RELEASE;
-		return ! empty( $release['date'] ) && ( null !== Targets::missing_patch( $php, $release ) || isset( $release['fixed'][ Targets::minor( $php ) ] ) );
+		return null !== Targets::patch_status( $php, $release );
 	}
 
 	/**
@@ -184,33 +183,72 @@ final class SiteHealth {
 	 *
 	 * @param string|null $php     PHP version the site runs (for tests); default the server's.
 	 * @param array|null  $release Release data (for tests); default Targets::SECURITY_RELEASE.
+	 * @param array|null  $build   Build facts (for tests); default the server's.
 	 * @return array Site Health result.
 	 */
-	public static function run_patch( $php = null, $release = null ) {
+	public static function run_patch( $php = null, $release = null, $build = null ) {
 		$php     = null === $php ? \Airworthy\Env::php_version() : $php;
 		$release = is_array( $release ) ? $release : Targets::SECURITY_RELEASE;
-		$missing = Targets::missing_patch( $php, $release );
-		if ( $missing ) {
-			$result = self::result(
-				$missing['critical'] ? 'critical' : 'recommended',
-				'missing' === $missing['level'] ?
+		$status  = Targets::patch_status( $php, $release, $build );
+		$level   = $status ? $status['level'] : 'patched';
+		$link    = __( 'Open Airworthy', 'airworthy' );
+		switch ( $level ) {
+			case 'missing':
+				$result = self::result(
+					$status['critical'] ? 'critical' : 'recommended',
 					/* translators: %s: PHP version. */
-					sprintf( __( 'Your server\'s PHP %s is missing security fixes', 'airworthy' ), $php ) :
+					sprintf( __( 'Your server\'s PHP %s is missing security fixes', 'airworthy' ), $php ),
+					$status['text'],
+					$link
+				);
+				break;
+			case 'behind':
+				$result = self::result(
+					'recommended',
+					/* translators: %s: PHP version. */
+					sprintf( __( 'Your server\'s PHP %s hasn\'t had the latest security fixes yet', 'airworthy' ), $php ),
+					$status['text'],
+					$link
+				);
+				break;
+			case 'unsure':
+				$result = self::result(
+					'recommended',
+					/* translators: %s: PHP version. */
+					sprintf( __( 'Airworthy can\'t tell whether PHP %s has the latest security fixes', 'airworthy' ), $php ),
+					$status['text'],
+					$link
+				);
+				break;
+			case 'unpatched':
+				$result = self::result(
+					$status['critical'] ? 'critical' : 'recommended',
 					/* translators: %s: PHP version. */
 					sprintf( __( 'PHP %s no longer gets security fixes', 'airworthy' ), Targets::minor( $php ) ),
-				$missing['text'],
-				'missing' === $missing['level'] ? __( 'Open Airworthy', 'airworthy' ) : __( 'Check your plugins for a newer PHP version', 'airworthy' )
-			);
-		} else {
-			$date   = date_i18n( get_option( 'date_format' ), strtotime( $release['date'] . ' 12:00:00 UTC' ) );
-			$result = self::result(
-				'good',
-				/* translators: %s: PHP version. */
-				sprintf( __( 'PHP %s has the latest security fixes Airworthy knows of', 'airworthy' ), $php ),
-				/* translators: %s: date. */
-				sprintf( __( 'It includes the PHP security fixes released on %s.', 'airworthy' ), $date ),
-				__( 'Open Airworthy', 'airworthy' )
-			);
+					$status['text'],
+					__( 'Check your plugins for a newer PHP version', 'airworthy' )
+				);
+				break;
+			case 'backported':
+				$result = self::result(
+					'good',
+					/* translators: %s: PHP version. */
+					sprintf( __( 'PHP %s very likely has the latest security fixes', 'airworthy' ), $php ),
+					$status['text'],
+					$link
+				);
+				break;
+			default:
+				$result = self::result(
+					'good',
+					/* translators: %s: PHP version. */
+					sprintf( __( 'PHP %s has the latest security fixes Airworthy knows of', 'airworthy' ), $php ),
+					$status ?
+						$status['text'] :
+						/* translators: %s: date. */
+						sprintf( __( 'It includes the PHP security fixes released on %s.', 'airworthy' ), date_i18n( get_option( 'date_format' ), strtotime( $release['date'] . ' 12:00:00 UTC' ) ) ),
+					$link
+				);
 		}
 		$result['test']  = self::TEST_PATCH;
 		$result['badge'] = array(

@@ -2,14 +2,14 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Airworthy – PHP Compatibility & Upgrade Checker 1.1.0\n"
+"Project-Id-Version: Airworthy – PHP Compatibility & Upgrade Checker 1.1.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/airworthy\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-21T21:15:16+00:00\n"
+"POT-Creation-Date: 2026-10-22T09:08:31+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: airworthy\n"
@@ -520,8 +520,7 @@ msgid "Check for PHP %s"
 msgstr ""
 
 #: src/Admin/SiteHealth.php:98
-#: src/Admin/SiteHealth.php:202
-#: src/Admin/SiteHealth.php:212
+#: src/Admin/SiteHealth.php:194
 msgid "Open Airworthy"
 msgstr ""
 
@@ -580,39 +579,66 @@ msgid "Airworthy checked your site on %1$s and found nothing that would break on
 msgstr ""
 
 #. translators: %s: PHP version.
-#: src/Admin/SiteHealth.php:198
+#: src/Admin/SiteHealth.php:200
 #, php-format
 msgid "Your server's PHP %s is missing security fixes"
 msgstr ""
 
 #. translators: %s: PHP version.
-#: src/Admin/SiteHealth.php:200
+#: src/Admin/SiteHealth.php:209
+#, php-format
+msgid "Your server's PHP %s hasn't had the latest security fixes yet"
+msgstr ""
+
+#. translators: %s: PHP version.
+#: src/Admin/SiteHealth.php:218
+#, php-format
+msgid "Airworthy can't tell whether PHP %s has the latest security fixes"
+msgstr ""
+
+#. translators: %s: PHP version.
+#: src/Admin/SiteHealth.php:227
 #, php-format
 msgid "PHP %s no longer gets security fixes"
 msgstr ""
 
-#: src/Admin/SiteHealth.php:202
+#: src/Admin/SiteHealth.php:229
 msgid "Check your plugins for a newer PHP version"
 msgstr ""
 
 #. translators: %s: PHP version.
-#: src/Admin/SiteHealth.php:209
+#: src/Admin/SiteHealth.php:236
+#, php-format
+msgid "PHP %s very likely has the latest security fixes"
+msgstr ""
+
+#. translators: %s: PHP version.
+#: src/Admin/SiteHealth.php:245
 #, php-format
 msgid "PHP %s has the latest security fixes Airworthy knows of"
 msgstr ""
 
 #. translators: %s: date.
-#: src/Admin/SiteHealth.php:211
+#: src/Admin/SiteHealth.php:249
+#: src/Targets.php:252
 #, php-format
 msgid "It includes the PHP security fixes released on %s."
 msgstr ""
 
-#: src/Admin/SiteHealth.php:217
+#: src/Admin/SiteHealth.php:255
 msgid "Security"
 msgstr ""
 
-#: src/Admin/SiteHealth.php:254
+#: src/Admin/SiteHealth.php:292
 msgid "Compatibility"
+msgstr ""
+
+#: src/Env.php:160
+msgid "Debian or Ubuntu"
+msgstr ""
+
+#: src/Env.php:162
+msgid "Red Hat Enterprise Linux or a derivative"
 msgstr ""
 
 #: src/Rest/Controller.php:88
@@ -1212,26 +1238,68 @@ msgid_plural "Security fixes for PHP %1$s continue until %2$s: %3$d months left.
 msgstr[0] ""
 msgstr[1] ""
 
-#. translators: 1: date, 2: fixed PHP version, 3: server's PHP version.
-#: src/Targets.php:231
+#. translators: 1: date, 2: fixed PHP version.
+#: src/Targets.php:261
 #, php-format
-msgid "Critical PHP security fixes came out on %1$s, in PHP %2$s. This server runs PHP %3$s, without them. Ask your host to update PHP now: an update within the same version is routine and doesn't change how your plugins work."
+msgid "Critical PHP security fixes came out on %1$s, in PHP %2$s."
 msgstr ""
 
-#. translators: 1: date, 2: fixed PHP version, 3: server's PHP version.
-#: src/Targets.php:233
+#. translators: 1: date, 2: fixed PHP version.
+#: src/Targets.php:263
 #, php-format
-msgid "PHP security fixes came out on %1$s, in PHP %2$s. This server runs PHP %3$s, without them. Ask your host to update PHP: an update within the same version is routine and doesn't change how your plugins work."
+msgid "PHP security fixes came out on %1$s, in PHP %2$s."
+msgstr ""
+
+#. translators: 1: server's PHP version, 2: build date, 3: vendor, e.g. CloudLinux.
+#: src/Targets.php:271
+#, php-format
+msgid "This server runs PHP %1$s from %3$s, built on %2$s, so it was made with those fixes available. %3$s includes security fixes as an update that keeps the version number, so this server very likely has them. To be certain, ask your host."
+msgstr ""
+
+#. translators: 1: server's PHP version, 2: build date.
+#: src/Targets.php:273
+#, php-format
+msgid "This server runs PHP %1$s, built on %2$s, so it was made with those fixes available. Hosts and Linux distributions often include security fixes as an update that keeps the version number, so this server very likely has them. To be certain, ask your host."
+msgstr ""
+
+#. translators: 1: server's PHP version, 2: build date, 3: vendor, e.g. CloudLinux.
+#: src/Targets.php:278
+#, php-format
+msgid "This server runs PHP %1$s from %3$s, built on %2$s, before those fixes existed. %3$s ships security fixes as an update that keeps the version number, and this server hasn't had it yet. Ask your host to apply the latest PHP updates: that's routine and doesn't change how your plugins work."
+msgstr ""
+
+#. translators: 1: server's PHP version, 2: build date.
+#: src/Targets.php:284
+#, php-format
+msgid "This server runs PHP %1$s, built on %2$s, before those fixes existed, so it doesn't have them. Ask your host to update PHP now: an update within the same version is routine and doesn't change how your plugins work."
+msgstr ""
+
+#. translators: 1: server's PHP version, 2: build date.
+#: src/Targets.php:286
+#, php-format
+msgid "This server runs PHP %1$s, built on %2$s, before those fixes existed, so it doesn't have them. Ask your host to update PHP: an update within the same version is routine and doesn't change how your plugins work."
+msgstr ""
+
+#. translators: 1: server's PHP version, 2: vendor, e.g. CloudLinux, 3: date.
+#: src/Targets.php:292
+#, php-format
+msgid "This server runs PHP %1$s from %2$s, which ships security fixes as an update that keeps the version number, so the version alone doesn't show whether they're in. Ask your host whether this server has the PHP security fixes released on %3$s, and to apply them if not: that's routine and doesn't change how your plugins work."
+msgstr ""
+
+#. translators: 1: server's PHP version, 2: date.
+#: src/Targets.php:294
+#, php-format
+msgid "This server runs PHP %1$s. Many hosts include security fixes as an update that keeps the version number, so the version alone doesn't show whether they're in. Ask your host whether this server has the PHP security fixes released on %2$s, and to apply them if not: that's routine and doesn't change how your plugins work."
 msgstr ""
 
 #. translators: 1: PHP version, 2: date, 3: suggested PHP version.
-#: src/Targets.php:250
+#: src/Targets.php:306
 #, php-format
 msgid "PHP %1$s no longer gets security fixes from the PHP project, so there was no PHP %1$s release with the critical fixes of %2$s. Some hosts patch old versions themselves: ask yours whether this server has them, and plan to move your site to PHP %3$s or newer, after checking your plugins and themes for it here."
 msgstr ""
 
 #. translators: 1: PHP version, 2: date, 3: suggested PHP version.
-#: src/Targets.php:252
+#: src/Targets.php:308
 #, php-format
 msgid "PHP %1$s no longer gets security fixes from the PHP project, so there was no PHP %1$s release with the fixes of %2$s. Some hosts patch old versions themselves: ask yours whether this server has them, and plan to move your site to PHP %3$s or newer, after checking your plugins and themes for it here."
 msgstr ""
@@ -1796,23 +1864,23 @@ msgstr[1] ""
 msgid "None"
 msgstr ""
 
-#: assets/admin.js:1034
+#: assets/admin.js:1031
 msgid "What this means and how to fix it"
 msgstr ""
 
-#: assets/admin.js:1036
+#: assets/admin.js:1033
 msgid "What happens: "
 msgstr ""
 
-#: assets/admin.js:1037
+#: assets/admin.js:1034
 msgid "How to fix it: "
 msgstr ""
 
-#: assets/admin.js:1041
+#: assets/admin.js:1038
 msgid "Before"
 msgstr ""
 
-#: assets/admin.js:1042
+#: assets/admin.js:1039
 msgid "After"
 msgstr ""
 

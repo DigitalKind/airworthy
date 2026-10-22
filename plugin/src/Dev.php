@@ -24,4 +24,15 @@ final class Dev {
 	public static function server_php_version() {
 		return (string) apply_filters( 'airworthy_dev_server_php_version', PHP_VERSION );
 	}
+
+	/**
+	 * The server's PHP build facts (date, vendor), overridable in development builds only (to
+	 * preview how a server on a backport vendor sees the security-fixes check).
+	 *
+	 * @param array $build The real facts, from Env::php_build().
+	 * @return array
+	 */
+	public static function php_build( $build ) {
+		return (array) apply_filters( 'airworthy_dev_php_build', $build );
+	}
 }

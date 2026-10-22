@@ -202,42 +202,98 @@ final class Targets {
 	}
 
 	/**
-	 * Whether the server's PHP is missing the latest security release Airworthy knows about.
+	 * Where the server's PHP stands against the latest security release Airworthy knows about.
 	 *
-	 * @param string     $version e.g. "8.3.30".
+	 * The version number alone can't settle it: CloudLinux, cPanel, Plesk, Debian, Ubuntu and
+	 * Red Hat ship PHP security fixes as updates that keep the old version number (backports),
+	 * so a version below php.net's fixed release may well have the fixes. Below the fixed
+	 * version the build date decides (a PHP built before the fixes existed can't have them; one
+	 * built once they were out very likely does), and the vendor sets the tone.
+	 *
+	 * @param string     $version e.g. "8.3.35".
 	 * @param array|null $release Release data (for tests); default SECURITY_RELEASE.
-	 * @return array{level:string,fixed_in:?string,date:string,critical:bool,text:string}|null
-	 *         level: missing (a supported version without the fixes) | unpatched (a version
-	 *         that no longer gets fixes and is affected). Null when nothing is missing or
-	 *         nothing is known.
+	 * @param array|null $build   Build facts, date (Y-m-d or null) and vendor (an Env::VENDORS id
+	 *                            or null) (for tests); default Env::php_build().
+	 * @return array{level:string,tone:string,fixed_in:?string,date:string,critical:bool,build_date:?string,vendor:?string,text:string}|null
+	 *         level: patched (at or above the fixed version) | backported (below it, built once
+	 *         the fixes were out: very likely has them) | missing (built before the fixes
+	 *         existed, no backport vendor: without them) | behind (built before the fixes
+	 *         existed, on a backport vendor: the update hasn't been applied yet) | unsure (below
+	 *         the fixed version, build date unreadable) | unpatched (a version that no longer
+	 *         gets fixes and is affected). tone: ok | soon | ended, the screens' colours. Null
+	 *         when nothing is known: no release, no full version number, or a version the
+	 *         release doesn't cover that still gets fixes.
 	 */
-	public static function missing_patch( $version, $release = null ) {
+	public static function patch_status( $version, $release = null, $build = null ) {
 		$release = is_array( $release ) ? $release : self::SECURITY_RELEASE;
 		if ( empty( $release['date'] ) || ! preg_match( '/^\d+\.\d+\.\d+/', (string) $version, $m ) ) {
 			return null;
 		}
 		$exact    = $m[0];
 		$minor    = self::minor( $exact );
-		$date     = date_i18n( get_option( 'date_format' ), strtotime( $release['date'] . ' 12:00:00 UTC' ) );
+		$date     = self::format_date( $release['date'] );
 		$critical = ! empty( $release['critical'] );
 		$fixed    = isset( $release['fixed'][ $minor ] ) ? (string) $release['fixed'][ $minor ] : null;
+		$status   = array(
+			'level'      => '',
+			'tone'       => 'ok',
+			'fixed_in'   => $fixed,
+			'date'       => $release['date'],
+			'critical'   => $critical,
+			'build_date' => null,
+			'vendor'     => null,
+			'text'       => '',
+		);
 
 		if ( null !== $fixed ) {
 			if ( version_compare( $exact, $fixed, '>=' ) ) {
-				return null;
+				$status['level'] = 'patched';
+				/* translators: %s: date. */
+				$status['text'] = sprintf( __( 'It includes the PHP security fixes released on %s.', 'airworthy' ), $date );
+				return $status;
 			}
-			$text = $critical ?
-				/* translators: 1: date, 2: fixed PHP version, 3: server's PHP version. */
-				__( 'Critical PHP security fixes came out on %1$s, in PHP %2$s. This server runs PHP %3$s, without them. Ask your host to update PHP now: an update within the same version is routine and doesn\'t change how your plugins work.', 'airworthy' ) :
-				/* translators: 1: date, 2: fixed PHP version, 3: server's PHP version. */
-				__( 'PHP security fixes came out on %1$s, in PHP %2$s. This server runs PHP %3$s, without them. Ask your host to update PHP: an update within the same version is routine and doesn\'t change how your plugins work.', 'airworthy' );
-			return array(
-				'level'    => 'missing',
-				'fixed_in' => $fixed,
-				'date'     => $release['date'],
-				'critical' => $critical,
-				'text'     => sprintf( $text, $date, $fixed, $exact ),
-			);
+			$build  = is_array( $build ) ? $build : Env::php_build();
+			$built  = empty( $build['date'] ) ? null : (string) $build['date'];
+			$vendor = empty( $build['vendor'] ) ? null : Env::vendor_name( $build['vendor'] );
+			$when   = $built ? self::format_date( $built ) : '';
+			$intro  = $critical ?
+				/* translators: 1: date, 2: fixed PHP version. */
+				sprintf( __( 'Critical PHP security fixes came out on %1$s, in PHP %2$s.', 'airworthy' ), $date, $fixed ) :
+				/* translators: 1: date, 2: fixed PHP version. */
+				sprintf( __( 'PHP security fixes came out on %1$s, in PHP %2$s.', 'airworthy' ), $date, $fixed );
+
+			$status['build_date'] = $built;
+			$status['vendor']     = $vendor;
+			if ( $built && $built >= $release['date'] ) {
+				$status['level'] = 'backported';
+				$status['text']  = $intro . ' ' . ( $vendor ?
+					/* translators: 1: server's PHP version, 2: build date, 3: vendor, e.g. CloudLinux. */
+					sprintf( __( 'This server runs PHP %1$s from %3$s, built on %2$s, so it was made with those fixes available. %3$s includes security fixes as an update that keeps the version number, so this server very likely has them. To be certain, ask your host.', 'airworthy' ), $exact, $when, $vendor ) :
+					/* translators: 1: server's PHP version, 2: build date. */
+					sprintf( __( 'This server runs PHP %1$s, built on %2$s, so it was made with those fixes available. Hosts and Linux distributions often include security fixes as an update that keeps the version number, so this server very likely has them. To be certain, ask your host.', 'airworthy' ), $exact, $when ) );
+			} elseif ( $built && $vendor ) {
+				$status['level'] = 'behind';
+				$status['tone']  = 'soon';
+				/* translators: 1: server's PHP version, 2: build date, 3: vendor, e.g. CloudLinux. */
+				$status['text'] = $intro . ' ' . sprintf( __( 'This server runs PHP %1$s from %3$s, built on %2$s, before those fixes existed. %3$s ships security fixes as an update that keeps the version number, and this server hasn\'t had it yet. Ask your host to apply the latest PHP updates: that\'s routine and doesn\'t change how your plugins work.', 'airworthy' ), $exact, $when, $vendor );
+			} elseif ( $built ) {
+				$status['level'] = 'missing';
+				$status['tone']  = 'ended';
+				$status['text']  = $intro . ' ' . ( $critical ?
+					/* translators: 1: server's PHP version, 2: build date. */
+					sprintf( __( 'This server runs PHP %1$s, built on %2$s, before those fixes existed, so it doesn\'t have them. Ask your host to update PHP now: an update within the same version is routine and doesn\'t change how your plugins work.', 'airworthy' ), $exact, $when ) :
+					/* translators: 1: server's PHP version, 2: build date. */
+					sprintf( __( 'This server runs PHP %1$s, built on %2$s, before those fixes existed, so it doesn\'t have them. Ask your host to update PHP: an update within the same version is routine and doesn\'t change how your plugins work.', 'airworthy' ), $exact, $when ) );
+			} else {
+				$status['level'] = 'unsure';
+				$status['tone']  = 'soon';
+				$status['text']  = $intro . ' ' . ( $vendor ?
+					/* translators: 1: server's PHP version, 2: vendor, e.g. CloudLinux, 3: date. */
+					sprintf( __( 'This server runs PHP %1$s from %2$s, which ships security fixes as an update that keeps the version number, so the version alone doesn\'t show whether they\'re in. Ask your host whether this server has the PHP security fixes released on %3$s, and to apply them if not: that\'s routine and doesn\'t change how your plugins work.', 'airworthy' ), $exact, $vendor, $date ) :
+					/* translators: 1: server's PHP version, 2: date. */
+					sprintf( __( 'This server runs PHP %1$s. Many hosts include security fixes as an update that keeps the version number, so the version alone doesn\'t show whether they\'re in. Ask your host whether this server has the PHP security fixes released on %2$s, and to apply them if not: that\'s routine and doesn\'t change how your plugins work.', 'airworthy' ), $exact, $date ) );
+			}
+			return $status;
 		}
 
 		// No fix for this version: only worth saying when it no longer gets fixes and is affected.
@@ -250,13 +306,36 @@ final class Targets {
 			__( 'PHP %1$s no longer gets security fixes from the PHP project, so there was no PHP %1$s release with the critical fixes of %2$s. Some hosts patch old versions themselves: ask yours whether this server has them, and plan to move your site to PHP %3$s or newer, after checking your plugins and themes for it here.', 'airworthy' ) :
 			/* translators: 1: PHP version, 2: date, 3: suggested PHP version. */
 			__( 'PHP %1$s no longer gets security fixes from the PHP project, so there was no PHP %1$s release with the fixes of %2$s. Some hosts patch old versions themselves: ask yours whether this server has them, and plan to move your site to PHP %3$s or newer, after checking your plugins and themes for it here.', 'airworthy' );
-		return array(
-			'level'    => 'unpatched',
-			'fixed_in' => null,
-			'date'     => $release['date'],
-			'critical' => $critical,
-			'text'     => sprintf( $text, $minor, $date, self::default_for( $exact ) ),
-		);
+
+		$status['level'] = 'unpatched';
+		$status['tone']  = 'ended';
+		$status['text']  = sprintf( $text, $minor, $date, self::default_for( $exact ) );
+		return $status;
+	}
+
+	/**
+	 * The patch_status() levels that call for action: what the start screen, the results and
+	 * the REST answer show as a notice.
+	 *
+	 * @param string     $version e.g. "8.3.35".
+	 * @param array|null $release Release data (for tests); default SECURITY_RELEASE.
+	 * @param array|null $build   Build facts (for tests); default Env::php_build().
+	 * @return array|null The patch_status() array for level missing, behind, unsure or unpatched;
+	 *         null when the server's PHP has the fixes, very likely has them, or nothing is known.
+	 */
+	public static function missing_patch( $version, $release = null, $build = null ) {
+		$status = self::patch_status( $version, $release, $build );
+		return $status && in_array( $status['level'], array( 'missing', 'behind', 'unsure', 'unpatched' ), true ) ? $status : null;
+	}
+
+	/**
+	 * A Y-m-d date in the site's date format.
+	 *
+	 * @param string $ymd Date.
+	 * @return string
+	 */
+	private static function format_date( $ymd ) {
+		return date_i18n( get_option( 'date_format' ), strtotime( $ymd . ' 12:00:00 UTC' ) );
 	}
 
 	/**

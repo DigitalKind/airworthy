@@ -311,25 +311,76 @@ wp_set_current_user( (int) $editor_id );
 $check( 'Plugins screen: editors see no badges', '' === \Airworthy\Admin\PluginsScreen::badge( 'fx-implode/fx-implode.php', array( 'Version' => $fx_ver ) ) );
 wp_set_current_user( $admin_id );
 
-// PHP security releases: the server's PHP is missing the latest fixes (sample release data).
-$rel  = array(
+// PHP security releases: the server's PHP against the latest fixes (sample release data and
+// build facts; the "museum" build is Hosting Ireland's CloudLinux alt-php83 8.3.35-6 of 21 Oct 2026,
+// which has the fixes as a backport but still reports PHP_VERSION 8.3.35).
+$rel = array(
 	'date'         => '2026-10-21',
 	'critical'     => true,
 	'fixed'        => array( '8.2' => '8.2.35', '8.3' => '8.3.36', '8.4' => '8.4.27', '8.5' => '8.5.12' ),
 	'eol_affected' => true,
 );
-$miss = Targets::missing_patch( '8.3.30', $rel );
-$check( 'Patch: 8.3.30 is missing the critical fixes in 8.3.36', $miss && 'missing' === $miss['level'] && '8.3.36' === $miss['fixed_in'] && $miss['critical'] && false !== strpos( $miss['text'], '8.3.36' ), wp_json_encode( $miss ) );
-$check( 'Patch: 8.3.36 and later have them', null === Targets::missing_patch( '8.3.36', $rel ) && null === Targets::missing_patch( '8.3.40', $rel ) );
-$old = Targets::missing_patch( '8.1.33', $rel );
-$check( 'Patch: 8.1 gets no fix, and says to move to a newer version', $old && 'unpatched' === $old['level'] && null === $old['fixed_in'], wp_json_encode( $old ) );
-$check( 'Patch: nothing said about 8.1 when old versions aren\'t affected', null === Targets::missing_patch( '8.1.33', array( 'eol_affected' => false ) + $rel ) );
-$check( 'Patch: nothing said without a known release or a full version number', null === Targets::missing_patch( '8.3.30', array( 'date' => '' ) + $rel ) && null === Targets::missing_patch( '8.3', $rel ) );
-$check( 'Patch: a newer PHP than the release covers says nothing', null === Targets::missing_patch( '8.6.0', $rel ) && ! \Airworthy\Admin\SiteHealth::knows_patch( '8.6.0', $rel ) );
-$ph = \Airworthy\Admin\SiteHealth::run_patch( '8.4.20', $rel );
+$b_unknown = array( 'date' => null, 'vendor' => null );               // Build date unreadable, vendor unknown.
+$b_old     = array( 'date' => '2026-09-01', 'vendor' => null );       // An upstream-looking build from before the release.
+$b_museum  = array( 'date' => '2026-10-21', 'vendor' => 'cloudlinux' ); // Built on release day by a backport vendor.
+$b_cl_old  = array( 'date' => '2026-09-01', 'vendor' => 'cloudlinux' ); // A backport vendor's build that hasn't had the update.
+$check( 'Patch: 8.3.36 and later have them, whatever the build', null === Targets::missing_patch( '8.3.36', $rel, $b_unknown ) && null === Targets::missing_patch( '8.3.40', $rel, $b_old ) && 'patched' === Targets::patch_status( '8.3.36', $rel, $b_old )['level'] );
+$miss = Targets::missing_patch( '8.3.30', $rel, $b_old );
+$check( 'Patch: 8.3.30 built before the fixes existed is missing them (red)', $miss && 'missing' === $miss['level'] && 'ended' === $miss['tone'] && '8.3.36' === $miss['fixed_in'] && $miss['critical'] && false !== strpos( $miss['text'], '8.3.36' ) && false !== strpos( $miss['text'], 'built on' ), wp_json_encode( $miss ) );
+$back = Targets::patch_status( '8.3.35', $rel, $b_museum );
+$check( 'Patch: the museum build (8.3.35, CloudLinux, built on release day) very likely has them, no notice', $back && 'backported' === $back['level'] && 'ok' === $back['tone'] && null === Targets::missing_patch( '8.3.35', $rel, $b_museum ) && false !== strpos( $back['text'], 'CloudLinux' ) && '2026-10-21' === $back['build_date'], wp_json_encode( $back ) );
+$check( 'Patch: an unknown vendor built after the release is treated the same way', 'backported' === Targets::patch_status( '8.3.35', $rel, array( 'date' => '2026-10-25', 'vendor' => null ) )['level'] );
+$behind = Targets::missing_patch( '8.3.35', $rel, $b_cl_old );
+$check( 'Patch: a CloudLinux 8.3.35 built before the fixes hasn\'t had the update (orange, not red)', $behind && 'behind' === $behind['level'] && 'soon' === $behind['tone'] && false !== strpos( $behind['text'], 'keeps the version number' ), wp_json_encode( $behind ) );
+$unsure = Targets::missing_patch( '8.3.35', $rel, $b_unknown );
+$check( 'Patch: no build date means unsure, never red on the version alone', $unsure && 'unsure' === $unsure['level'] && 'soon' === $unsure['tone'] && false !== strpos( $unsure['text'], 'Ask your host' ), wp_json_encode( $unsure ) );
+$check( 'Patch: unsure names the vendor when known', false !== strpos( Targets::missing_patch( '8.2.30', $rel, array( 'date' => null, 'vendor' => 'cpanel' ) )['text'], 'cPanel' ) );
+$old = Targets::missing_patch( '8.1.33', $rel, $b_unknown );
+$check( 'Patch: 8.1 gets no fix, and says to move to a newer version', $old && 'unpatched' === $old['level'] && 'ended' === $old['tone'] && null === $old['fixed_in'], wp_json_encode( $old ) );
+$check( 'Patch: nothing said about 8.1 when old versions aren\'t affected', null === Targets::missing_patch( '8.1.33', array( 'eol_affected' => false ) + $rel, $b_unknown ) );
+$check( 'Patch: nothing said without a known release or a full version number', null === Targets::missing_patch( '8.3.30', array( 'date' => '' ) + $rel, $b_old ) && null === Targets::missing_patch( '8.3', $rel, $b_old ) );
+$check( 'Patch: a newer PHP than the release covers says nothing', null === Targets::missing_patch( '8.6.0', $rel, $b_old ) && ! \Airworthy\Admin\SiteHealth::knows_patch( '8.6.0', $rel ) );
+$check( 'Patch: Site Health knows a patched, a missing and an unsupported version', \Airworthy\Admin\SiteHealth::knows_patch( '8.3.36', $rel ) && \Airworthy\Admin\SiteHealth::knows_patch( '8.3.30', $rel ) && \Airworthy\Admin\SiteHealth::knows_patch( '8.1.33', $rel ) );
+
+// How the server's PHP was built (Env::php_build and its parsers).
+$check( 'Build: PHP_BUILD_DATE and phpinfo() dates parse to Y-m-d', '2026-10-21' === \Airworthy\Env::build_date( 'Oct 21 2026 11:45:44' ) && '2024-11-05' === \Airworthy\Env::build_date( 'Nov  5 2024 14:00:00' ) && null === \Airworthy\Env::build_date( '' ) && null === \Airworthy\Env::build_date( 'no date here' ) );
+$museum_info = "phpinfo()\nPHP Version => 8.3.35\n\nSystem => Linux gutenberg.webhostingireland.ie 4.18.0-553.123.2.lve.el8.x86_64 #1 SMP x86_64\nBuild Date => Oct 21 2026 11:45:44\nBuild System => Linux buildfarm06-new.corp.cloudlinux.com 5.14.0-687.15.1.el9_8.x86_64 #1 SMP x86_64 GNU/Linux\nServer API => LiteSpeed V8.1\n";
+$museum      = \Airworthy\Env::build_from( array( 'constant' => '', 'info' => $museum_info, 'version' => '8.3.35', 'paths' => array( '/opt/alt/php83/usr/bin/lsphp', '/opt/alt/php83/etc/php.ini', '/opt/alt/php83/usr/lib64/php/modules' ), 'uname' => '4.18.0-553.123.2.lve.el8.x86_64' ) );
+$check( 'Build: the museum\'s CloudLinux PHP reads as CloudLinux, built 2026-10-21', array( 'date' => '2026-10-21', 'vendor' => 'cloudlinux' ) === $museum, wp_json_encode( $museum ) );
+$check( 'Build: CloudLinux is recognised from the build host alone', 'cloudlinux' === \Airworthy\Env::build_from( array( 'info' => $museum_info, 'paths' => array( '/usr/bin/php' ) ) )['vendor'] );
+$check( 'Build: HTML phpinfo() output parses too', '2026-10-21' === \Airworthy\Env::build_from( array( 'info' => '<table><tr><td class="e">Build Date </td><td class="v">Oct 21 2026 11:45:44 </td></tr></table>' ) )['date'] );
+$check( 'Build: PHP_BUILD_DATE wins over phpinfo()', '2026-09-22' === \Airworthy\Env::build_from( array( 'constant' => 'Sep 22 2026 13:32:06', 'info' => "Build Date => Jan 01 2020 00:00:00\n" ) )['date'] );
+$check( 'Build: nothing readable gives null, not a guess', array( 'date' => null, 'vendor' => null ) === \Airworthy\Env::build_from( array() ) );
+$vendor_paths = array(
+	'cpanel' => array( '/opt/cpanel/ea-php83/root/usr/sbin/php-fpm', '/opt/cpanel/ea-php83/root/etc/php.ini' ),
+	'plesk'  => array( '/opt/plesk/php/8.3/sbin/php-fpm', '/opt/plesk/php/8.3/etc/php.ini' ),
+	'debian' => array( '/usr/sbin/php-fpm8.3', '/etc/php/8.3/fpm/php.ini', '/usr/lib/php/20230831' ),
+	''       => array( '/usr/local/sbin/php-fpm', '/usr/local/etc/php/php.ini', '/usr/local/lib/php/extensions/no-debug-non-zts-20230831' ),
+);
+foreach ( $vendor_paths as $want => $paths ) {
+	$got = \Airworthy\Env::build_from( array( 'version' => '8.3.35', 'paths' => $paths ) )['vendor'];
+	$check( 'Build: vendor from paths is ' . ( '' === $want ? 'unknown (upstream-looking)' : $want ), ( '' === $want ? null : $want ) === $got, wp_json_encode( $got ) );
+}
+$check( 'Build: Homebrew\'s /opt/homebrew/etc/php/8.5 is not mistaken for Debian', null === \Airworthy\Env::build_from( array( 'version' => '8.5.11', 'paths' => array( '/opt/homebrew/Cellar/php/8.5.11/bin/php', '/opt/homebrew/etc/php/8.5/php.ini' ) ) )['vendor'] );
+$check( 'Build: Ubuntu from the version string', 'ubuntu' === \Airworthy\Env::build_from( array( 'version' => '8.3.6-0ubuntu0.24.04.5', 'paths' => array( '/usr/sbin/php-fpm8.3' ) ) )['vendor'] );
+$check( 'Build: Red Hat family from the kernel when nothing else says', 'redhat' === \Airworthy\Env::build_from( array( 'version' => '8.2.27', 'paths' => array( '/usr/sbin/php-fpm' ), 'uname' => '5.14.0-503.14.1.el9_5.x86_64' ) )['vendor'] );
+$check( 'Build: every vendor id has a name', 6 === count( array_filter( array_map( array( '\Airworthy\Env', 'vendor_name' ), \Airworthy\Env::VENDORS ) ) ) && null === \Airworthy\Env::vendor_name( 'nope' ) );
+$live = \Airworthy\Env::php_build();
+$check( 'Build: this server\'s build date is readable and not in the future', ! empty( $live['date'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $live['date'] ) && $live['date'] <= gmdate( 'Y-m-d' ), wp_json_encode( $live ) );
+
+// Site Health's security-fixes test, by level.
+$ph = \Airworthy\Admin\SiteHealth::run_patch( '8.4.20', $rel, $b_old );
 $check( 'Site Health: a missing critical fix is critical, with a red Security badge', 'critical' === $ph['status'] && 'red' === $ph['badge']['color'] && \Airworthy\Admin\SiteHealth::TEST_PATCH === $ph['test'], $ph['label'] );
-$ph = \Airworthy\Admin\SiteHealth::run_patch( '8.4.27', $rel );
-$check( 'Site Health: patched is good', 'good' === $ph['status'], $ph['label'] );
+$ph = \Airworthy\Admin\SiteHealth::run_patch( '8.4.27', $rel, $b_old );
+$check( 'Site Health: patched is good', 'good' === $ph['status'] && 'blue' === $ph['badge']['color'], $ph['label'] );
+$ph = \Airworthy\Admin\SiteHealth::run_patch( '8.3.35', $rel, $b_museum );
+$check( 'Site Health: the museum build is good, saying very likely', 'good' === $ph['status'] && 'blue' === $ph['badge']['color'] && false !== strpos( $ph['label'], 'very likely' ) && false !== strpos( $ph['description'], 'CloudLinux' ), $ph['label'] );
+$ph = \Airworthy\Admin\SiteHealth::run_patch( '8.3.35', $rel, $b_cl_old );
+$check( 'Site Health: a backport vendor build from before the fixes is recommended (orange), not critical', 'recommended' === $ph['status'] && 'orange' === $ph['badge']['color'], $ph['label'] );
+$ph = \Airworthy\Admin\SiteHealth::run_patch( '8.3.35', $rel, $b_unknown );
+$check( 'Site Health: an unreadable build date is recommended, never critical', 'recommended' === $ph['status'] && false !== strpos( $ph['label'], 'can\'t tell' ), $ph['label'] );
+$ph = \Airworthy\Admin\SiteHealth::run_patch( '8.1.33', $rel, $b_unknown );
+$check( 'Site Health: a version that gets no fix is critical when the release is', 'critical' === $ph['status'] && false !== strpos( $ph['label'], 'no longer gets' ), $ph['label'] );
 
 wp_delete_user( (int) $editor_id );
 if ( isset( $site_admin ) ) {
