@@ -5,6 +5,7 @@
 	<file>plugin/airworthy.php</file>
 	<file>plugin/uninstall.php</file>
 	<file>plugin/src</file>
+	<file>plugin/standards</file>
 	<file>plugin/assets/admin.js</file>
 
 	<arg name="extensions" value="php,js"/>
@@ -31,6 +32,11 @@
 				<element value="Airworthy"/>
 			</property>
 		</properties>
+	</rule>
+
+	<!-- Our PHP_CodeSniffer sniffs use PHP_CodeSniffer's own API (Tokens::$emptyTokens, register(), process()). -->
+	<rule ref="WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase">
+		<exclude-pattern>plugin/standards/*</exclude-pattern>
 	</rule>
 
 	<!-- PSR-4 style class files (src/Scan/Queue.php), not class-queue.php. -->

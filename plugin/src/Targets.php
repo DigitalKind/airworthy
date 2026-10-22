@@ -15,7 +15,7 @@ defined( 'ABSPATH' ) || exit;
 final class Targets {
 
 	/** Oldest first. */
-	const ALL = array( '8.0', '8.1', '8.2', '8.3', '8.4', '8.5' );
+	const ALL = array( '8.0', '8.1', '8.2', '8.3', '8.4', '8.5', '8.6' );
 
 	/**
 	 * Last day each PHP version gets security fixes (https://www.php.net/supported-versions.php
@@ -34,6 +34,15 @@ final class Targets {
 		'8.3' => '2027-12-31',
 		'8.4' => '2028-12-31',
 		'8.5' => '2029-12-31',
+		'8.6' => '2030-12-31', // From PHP's release policy (two years of bug fixes, two of security fixes, to 31 December); confirm on php.net after the release.
+	);
+
+	/**
+	 * Release days of PHP versions Airworthy checks before they're out (https://wiki.php.net/todo/php86).
+	 * Before that day a version is a release candidate: still checkable, never the default.
+	 */
+	const RELEASED = array(
+		'8.6' => '2026-11-19',
 	);
 
 	/** When SECURITY_UNTIL was last checked against php.net. */
@@ -79,7 +88,7 @@ final class Targets {
 	}
 
 	/**
-	 * Whether a target is a supported check version ("8.0"–"8.5").
+	 * Whether a target is a supported check version ("8.0"–"8.6").
 	 *
 	 * @param string $target e.g. "8.4".
 	 * @return bool
@@ -101,17 +110,25 @@ final class Targets {
 	public static function default_for( $current, $today = null ) {
 		$current_minor = self::minor( $current );
 		foreach ( self::ALL as $target ) {
-			if ( version_compare( $target, $current_minor, '>' ) && self::is_supported( $target, $today ) ) {
+			if ( version_compare( $target, $current_minor, '>' ) && self::is_supported( $target, $today ) && self::is_released( $target, $today ) ) {
 				return $target;
 			}
 		}
+		$newest_released = self::ALL[0];
 		foreach ( self::ALL as $target ) {
-			if ( version_compare( $target, $current_minor, '>' ) ) {
-				return $target;
+			if ( ! self::is_released( $target, $today ) ) {
+				continue;
 			}
+			if ( version_compare( $target, $current_minor, '>' ) ) {
+				return $target; // The support table is out of date: the next version up.
+			}
+			$newest_released = $target;
 		}
-		return self::ALL[ count( self::ALL ) - 1 ];
+		// Nothing newer is out yet (a release candidate is never the default): the server's own
+		// version when Airworthy checks it, otherwise the newest released one.
+		return in_array( $current_minor, self::ALL, true ) ? $current_minor : $newest_released;
 	}
+
 
 	/**
 	 * Whether a PHP version still gets security fixes. Versions older than the table have
@@ -240,6 +257,21 @@ final class Targets {
 			'critical' => $critical,
 			'text'     => sprintf( $text, $minor, $date, self::default_for( $exact ) ),
 		);
+	}
+
+	/**
+	 * Whether a PHP version has been released (versions not in RELEASED were out long ago).
+	 *
+	 * @param string   $version e.g. "8.6".
+	 * @param int|null $today   Timestamp; default now.
+	 * @return bool
+	 */
+	public static function is_released( $version, $today = null ) {
+		$minor = self::minor( $version );
+		if ( ! isset( self::RELEASED[ $minor ] ) ) {
+			return true;
+		}
+		return gmdate( 'Y-m-d', null === $today ? time() : $today ) >= self::RELEASED[ $minor ];
 	}
 
 	/**

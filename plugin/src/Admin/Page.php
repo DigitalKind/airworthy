@@ -83,6 +83,8 @@ final class Page {
 					'resultsActions' => self::results_actions(),
 					'review'         => Review::config(),
 					'pluginUrl'      => 'https://wordpress.org/plugins/airworthy/',
+					// Airworthy Pro's full upgrade plan, when Pro adds it as a tab.
+					'planUrl'        => isset( self::extra_tabs()['plan'] ) ? add_query_arg( 'tab', 'plan', self::url() ) : '',
 				)
 			) . ';',
 			'before'
@@ -159,7 +161,14 @@ final class Page {
 	private static function target_label( $target, $recommended ) {
 		$until = Targets::security_until( $target );
 		$date  = $until ? date_i18n( get_option( 'date_format' ), strtotime( $until . ' 12:00:00 UTC' ) ) : '';
-		if ( ! Targets::is_supported( $target ) ) {
+		if ( ! Targets::is_released( $target ) ) {
+			$label = sprintf(
+				/* translators: 1: PHP version, 2: release date. */
+				__( 'PHP %1$s (release candidate, out on %2$s)', 'airworthy' ),
+				$target,
+				date_i18n( get_option( 'date_format' ), strtotime( Targets::RELEASED[ $target ] . ' 12:00:00 UTC' ) )
+			);
+		} elseif ( ! Targets::is_supported( $target ) ) {
 			/* translators: 1: PHP version, 2: date security support ended. */
 			$label = sprintf( __( 'PHP %1$s (security fixes ended %2$s)', 'airworthy' ), $target, $date );
 		} elseif ( $until ) {
@@ -182,6 +191,16 @@ final class Page {
 	private static function default_explanation( $current, $recommended ) {
 		$current_minor = implode( '.', array_slice( explode( '.', $current ), 0, 2 ) );
 		if ( version_compare( $recommended, $current_minor, '<=' ) ) {
+			foreach ( Targets::ALL as $target ) {
+				if ( version_compare( $target, $current_minor, '>' ) && ! Targets::is_released( $target ) ) {
+					return sprintf(
+						/* translators: 1: PHP version, 2: release date. */
+						__( 'Your server already runs the newest released PHP version. PHP %1$s comes out on %2$s: you can already check against its release candidate.', 'airworthy' ),
+						$target,
+						date_i18n( get_option( 'date_format' ), strtotime( Targets::RELEASED[ $target ] . ' 12:00:00 UTC' ) )
+					);
+				}
+			}
 			return __( 'Your server already runs the newest PHP version Airworthy can check.', 'airworthy' );
 		}
 		$oldest = null;
@@ -355,7 +374,7 @@ final class Page {
 						<label for="airworthy-from"><?php esc_html_e( 'Your site runs PHP', 'airworthy' ); ?></label>
 						<select id="airworthy-from">
 							<?php
-							$airworthy_versions = array_unique( array_merge( array( '7.2', '7.3', '7.4', '8.0', '8.1', '8.2', '8.3', '8.4', '8.5' ), array( $airworthy_from ) ) );
+							$airworthy_versions = array_unique( array_merge( array( '7.2', '7.3', '7.4', '8.0', '8.1', '8.2', '8.3', '8.4', '8.5', '8.6' ), array( $airworthy_from ) ) );
 							usort( $airworthy_versions, 'version_compare' );
 							foreach ( $airworthy_versions as $airworthy_version ) :
 								?>

@@ -375,7 +375,9 @@ final class Controller {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
 		$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT file, line, severity, context, rule, message FROM %i WHERE scan_id = %d AND component_id = %d AND ( %d = 0 OR severity IN (%s,%s,%s,%s) ) AND ( %d = 0 OR context IN (%s,%s,%s,%s) ) ORDER BY CASE severity WHEN 'scan' THEN 0 WHEN 'error' THEN 1 WHEN 'warning' THEN 2 ELSE 3 END, CASE context WHEN 'plain' THEN 0 WHEN 'suppressed' THEN 1 WHEN 'guarded' THEN 2 ELSE 3 END, file, line LIMIT %d OFFSET %d", $t['issues'], $scan, $comp, $sev_on, $sev[0], $sev[1], $sev[2], $sev[3], $ctx_on, $ctx[0], $ctx[1], $ctx[2], $ctx[3], $per_page, $offset ) );
 
-		$items = array();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
+		$target = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT target_php FROM %i WHERE id = %d', $t['scans'], $scan ) );
+		$items  = array();
 		foreach ( $rows as $r ) {
 			$items[] = array(
 				'file'     => $r->file,
@@ -384,6 +386,7 @@ final class Controller {
 				'context'  => $r->context,
 				'rule'     => $r->rule,
 				'message'  => $r->message,
+				'explain'  => \Airworthy\Scan\Explain::issue( (string) $r->rule, (string) $r->message, (string) $r->severity, (string) $r->context, $target ),
 			);
 		}
 		$response = new \WP_REST_Response( $items, 200 );

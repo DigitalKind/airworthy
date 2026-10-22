@@ -4,7 +4,7 @@ Tags: php compatibility, php upgrade, php version, php 8, compatibility
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.2
-Stable tag: 1.0.3
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,7 +14,7 @@ PHP compatibility checker for your PHP upgrade: see which plugins and themes are
 
 Your host wants you on a newer PHP version. Will your site survive the switch?
 
-Airworthy reads the code of every installed plugin and of your theme (on multisite: every network-enabled theme) and checks it against the PHP version you pick, from PHP 8.0 to PHP 8.5. It also looks each plugin up on WordPress.org to see whether it is still maintained. You get one clear verdict per plugin and theme, before you touch your server settings.
+Airworthy reads the code of every installed plugin and of your theme (on multisite: every network-enabled theme) and checks it against the PHP version you pick, from PHP 8.0 to PHP 8.6. It also looks each plugin up on WordPress.org to see whether it is still maintained. You get one clear verdict per plugin and theme, before you touch your server settings.
 
 **Important:** Airworthy helps you plan a PHP upgrade; it doesn't guarantee one. Always back up your site and test the new PHP version on a staging copy before changing your live site.
 
@@ -23,10 +23,13 @@ Airworthy reads the code of every installed plugin and of your theme (on multisi
 * **A verdict for every plugin and theme.** Blocker, Unknown, Suppressed, Guarded, Warnings or Ready, each with one plain sentence explaining what it means for you.
 * **Fewer false alarms.** Many plugins carry old code that only runs on old PHP versions, behind a version check. Airworthy recognises those checks and marks that code as guarded instead of broken. In our test of the 30 most popular plugins, this cut the plugins flagged as broken from 4 to 2, and both of those contain code that really would fail on PHP 8.
 * **Maintenance signals from WordPress.org (if you allow it).** Plugins that were closed (removed from the directory), not updated in two years, not tested with recent WordPress versions, or that need a newer PHP version than you picked are called out.
-* **Know what to do next.** Results are grouped into fix before you upgrade, keep an eye on, and all good. Plugins with an update waiting say so, with a one-click update, and Airworthy checks them again once they're updated.
+* **Know what to do first.** Under the overall answer, Airworthy lists the next steps that matter most for your site: update this plugin, replace that closed one, send the findings for your custom code to its developer. Results are grouped into fix before you upgrade, keep an eye on, and all good. Plugins with an update waiting say so, with a one-click update, and Airworthy checks them again once they're updated.
+* **Explanations in plain English.** Each finding says what changed in PHP, what happens on the new version (the page stops with a fatal error, or PHP only logs a notice for now) and how to fix it, with a short before-and-after code example for the common cases.
+* **Verdicts on the Plugins screen.** After a scan, each plugin's row on the Plugins screen shows its verdict, such as "PHP 8.4: Ready" or "PHP 8.4: Blocker", linking to its details. You see it every time you manage your plugins.
+* **Ready for PHP 8.6.** PHP 8.6 is due on 19 November 2026. Airworthy already checks for its deprecations with its own checks, and you can check against its release candidate today.
 * **Know how long you have.** Airworthy shows when your server's PHP version stops getting security fixes, so you can plan the upgrade before it's urgent.
 * **Know when your PHP needs a security update.** If your server's PHP is missing the latest PHP security fixes, Airworthy says so on its screen and in Site Health, and tells you to ask your host to update (a routine update that doesn't change how your plugins work).
-* **The details when you want them.** Every finding shows the file, the line and what changed in PHP. Filter by verdict, rescan one plugin after an update, copy a plain-text summary to paste into an email or support ticket, or download everything as a CSV file for your developer or host.
+* **The details when you want them.** Every finding shows the file, the line, what changed in PHP and how to fix it. Filter by verdict, rescan one plugin after an update, copy a plain-text summary to paste into an email or support ticket, or download everything as a CSV file for your developer or host.
 * **Sensible default.** Airworthy recommends the oldest PHP version that still gets security fixes: the smallest upgrade that keeps your site protected. It shows every version's support dates.
 * **Safe on any host.** Scans run in the background in short batches, so they never time out, and they watch memory use. You can leave the page while a scan runs. Nothing is changed on your site.
 * **Settings that fit your site.** Skip inactive plugins, keep a list of plugins and themes never to check, and choose a gentler scan speed for cheap shared hosting.
@@ -101,7 +104,7 @@ No. It only reads files and reports. You change the PHP version yourself, usuall
 
 Airworthy reads the code without running it. That catches most PHP upgrade problems: functions, classes and constants that were removed, changed syntax, removed extensions, and new reserved words. It sees every file, including code paths your visitors rarely trigger.
 
-It can't see what only happens when code runs. For example: code that builds function names at run time, behaviour that depends on your data or settings, and problems in files a plugin downloads or generates later. Some newer PHP changes (such as a few PHP 8.1 and 8.5 deprecations) can't be detected reliably by reading code yet. So a "Ready" verdict means no problems were found, not a guarantee. Test on a staging copy of your site, and keep a backup, before you switch.
+It can't see what only happens when code runs. For example: code that builds function names at run time, behaviour that depends on your data or settings, and problems in files a plugin downloads or generates later. Some newer PHP changes (such as a few PHP 8.1, 8.5 and 8.6 deprecations that depend on the values code passes around) can't be detected reliably by reading code yet. So a "Ready" verdict means no problems were found, not a guarantee. Test on a staging copy of your site, and keep a backup, before you switch.
 
 = Is a "Ready" result a guarantee that my site will work? =
 
@@ -126,7 +129,7 @@ Nothing, unless you allow it when you start a scan. If you do, only each plugin'
 
 = A plugin shows as Blocker. What should I do? =
 
-Update it first, if an update is available; then rescan just that plugin with the Rescan button. If it's still a Blocker, open the details, download the CSV and send it to the plugin's author or your developer. If the plugin was closed on WordPress.org, look for a maintained replacement.
+Start with "What to do first" under the overall answer: it puts the steps in order for your site. Update the plugin first, if an update is available; Airworthy checks it again by itself afterwards. If it's still a Blocker, open its details: each finding explains what would happen and how it's fixed. Use Copy summary or the CSV to send the findings to the plugin's author or your developer. If the plugin was closed on WordPress.org, look for a maintained replacement.
 
 = Will a scan slow down my site? =
 
@@ -134,7 +137,11 @@ Scans run in the background in short batches of about 20 seconds, using WordPres
 
 = Which PHP versions can I check against? =
 
-PHP 8.0, 8.1, 8.2, 8.3, 8.4 and 8.5. Versions that no longer get security fixes are marked as ended; you can still check them, but results for them are less precise.
+PHP 8.0, 8.1, 8.2, 8.3, 8.4, 8.5 and 8.6. Versions that no longer get security fixes are marked as ended; you can still check them, but results for them are less precise. Until PHP 8.6 is released on 19 November 2026, it's marked as a release candidate and is never suggested by default.
+
+= Is Airworthy ready for PHP 8.6? =
+
+Yes. PHP 8.6 doesn't remove any functions or extensions, so it shouldn't break a site that works on PHP 8.5. It deprecates about 30 things, such as `spl_object_hash()`, `is_long()` and `is_integer()`, `return` inside a `finally` block and returning a value from a constructor. Code that uses them still works on 8.6 but will stop working in a later version, so Airworthy shows them as Warnings, with the replacement. PHPCompatibility, the open-source ruleset Airworthy builds on, doesn't cover PHP 8.6 yet, so these checks are Airworthy's own (in the plugin's `standards/Airworthy` folder). A few 8.6 deprecations only show when code runs, with particular values, and can't be found by reading code.
 
 = Why do I now see Tools > Scheduled Actions? =
 
@@ -152,13 +159,20 @@ Email security@airworthywp.com. Please don't post it in the public support forum
 
 1. Pick the PHP version to check against. Airworthy suggests the oldest version that still gets security fixes, and shows how long your server's current version has left.
 2. Scans run in the background in small batches, so they never time out. You see what's being checked, how long is left, and each plugin's verdict as it comes in.
-3. One clear answer for the whole site, a count for each verdict, and which plugins have an update waiting.
-4. Results grouped by what to do next. Details show each finding with its file, line and what changed in PHP, and updates are one click away.
+3. One clear answer for the whole site, the steps to take first, and a count for each verdict.
+4. Results grouped by what to do next. Details show each finding with its file and line, what it means on the new PHP version and how to fix it, and updates are one click away.
 5. Settings: skip inactive plugins, never check chosen plugins or themes, and pick a scan speed that suits your hosting. Changes save as you make them.
 6. A PHP upgrade check in Tools > Site Health, next to WordPress's own checks.
 7. The same check from WP-CLI, for agencies looking after many sites.
+8. Each plugin's verdict on the Plugins screen, linking to its details.
 
 == Changelog ==
+
+= 1.1.0 =
+* New: PHP 8.6. Check against PHP 8.6, due on 19 November 2026 (a release candidate until then, so it's never the default). PHPCompatibility doesn't cover PHP 8.6 yet, so Airworthy brings its own checks for its deprecations, such as `spl_object_hash()`, `is_long()`, `return` in `finally` and constructors that return a value. PHP 8.6 removes nothing, so these are Warnings: the code works on 8.6 but should be updated before a later version.
+* New: What to do first. Under the overall answer, up to three next steps for your site, most important first: replace closed plugins, install updates that fix problems, ask a plugin's developers for a fix, send findings for custom code to its developer, check files that couldn't be read. Each links to the plugin's details.
+* New: plain-English explanations. Each finding's details say what changed in PHP, what happens on the new version and how to fix it, with a before-and-after code example for the common cases. The CSV export has a new Explanation column.
+* New: verdicts on the Plugins screen. After a scan, each plugin's row shows its verdict for the PHP version you checked, linking to its details. It says when a plugin hasn't been checked since it was updated or installed, and it disappears once your server runs that PHP version.
 
 = 1.0.3 =
 * New: a PHP security-fixes check on the start screen, in the results and in Tools > Site Health. Airworthy knows the PHP security release of 21 October 2026 (PHP 8.5.12, 8.4.27, 8.3.36 and 8.2.35, fixing two critical vulnerabilities, CVE-2026-109618 and CVE-2026-109619). If your server's PHP is older than those, it tells you to ask your host to update: an update within the same version is routine and doesn't change how your plugins work. PHP 8.1 and older got no release from the PHP project, so for those it says to ask your host whether they patched it and to move to a newer version. The data is bundled with the plugin; nothing is fetched.
@@ -188,6 +202,9 @@ Email security@airworthywp.com. Please don't post it in the public support forum
 * CSV export and WP-CLI commands.
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+Adds PHP 8.6, a What to do first list, plain-English explanations with fixes, and verdicts on the Plugins screen.
 
 = 1.0.3 =
 Tells you when your server's PHP is missing the critical PHP security fixes of 21 October 2026.

@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<ruleset name="Airworthy">
+	<description>Airworthy's own compatibility checks, for PHP changes the bundled PHPCompatibility doesn't know yet (PHP 8.6). Loaded next to PHPCompatibilityWP by src/Engine/Engine.php.</description>
+</ruleset>

@@ -31,8 +31,12 @@ $check( 'Scan engine is scoped into Airworthy\\Vendor', is_readable( $engine ) &
 $check( 'Default for PHP 7.4 on 2026-09-27 is 8.2', '8.2' === Targets::default_for( '7.4.33', $day( '2026-09-27' ) ) );
 $check( 'Default for PHP 8.2 on 2026-09-27 is 8.3 (never a downgrade)', '8.3' === Targets::default_for( '8.2.10', $day( '2026-09-27' ) ) );
 $check( 'Default for PHP 7.4 on 2027-01-15 is 8.3', '8.3' === Targets::default_for( '7.4.33', $day( '2027-01-15' ) ) );
-$check( 'Default for PHP 8.5 is 8.5 (nothing newer)', '8.5' === Targets::default_for( '8.5.0', $day( '2026-09-27' ) ) );
+$check( 'Default for PHP 8.5 before 8.6 is out is 8.5 (nothing newer released)', '8.5' === Targets::default_for( '8.5.0', $day( '2026-09-27' ) ) );
 $check( 'Default when the table is out of date is the next version', '8.0' === Targets::default_for( '7.4.33', $day( '2031-01-01' ) ) );
+$check( 'PHP 8.6 is a release candidate until 19 Nov 2026', ! Targets::is_released( '8.6', $day( '2026-11-18' ) ) && Targets::is_released( '8.6', $day( '2026-11-19' ) ) && Targets::is_released( '8.5', $day( '2026-11-18' ) ) );
+$check( 'A release candidate is never the default', '8.5' === Targets::default_for( '8.5.12', $day( '2026-11-18' ) ) );
+$check( 'Default for PHP 8.5 once 8.6 is out is 8.6', '8.6' === Targets::default_for( '8.5.12', $day( '2026-11-20' ) ) );
+$check( 'A server already on the release candidate keeps it as the default', '8.6' === Targets::default_for( '8.6.0', $day( '2026-11-01' ) ) );
 $check( '8.1 ended on 2025-12-31', ! Targets::is_supported( '8.1', $day( '2026-01-01' ) ) && Targets::is_supported( '8.1', $day( '2025-12-31' ) ) );
 $check( 'Unknown targets are refused', ! Targets::is_valid( '9.0' ) && ! Targets::is_valid( '8.4.1' ) && Targets::is_valid( '8.4' ) );
 $check( 'Support table checked within the last 13 months', ( time() - $day( Targets::TABLE_CHECKED ) ) < 395 * DAY_IN_SECONDS, 'Update Targets::SECURITY_UNTIL (docs/RELEASE.md)' );
@@ -264,10 +268,48 @@ $check( 'Resume: an unknown scan is refused', is_wp_error( \Airworthy\Scan\Queue
 // Site Health: the test is registered and answers for the site's PHP version.
 $tests = apply_filters( 'site_status_tests', array( 'direct' => array(), 'async' => array() ) );
 $check( 'Site Health: test is registered', isset( $tests['direct'][ \Airworthy\Admin\SiteHealth::TEST ] ) );
-$health = \Airworthy\Admin\SiteHealth::run( '8.5.1' );
+$health = \Airworthy\Admin\SiteHealth::run( Targets::ALL[ count( Targets::ALL ) - 1 ] . '.1' );
 $check( 'Site Health: passes on the newest PHP version', 'good' === $health['status'], $health['label'] );
 $health = \Airworthy\Admin\SiteHealth::run( '7.2.34' );
 $check( 'Site Health: gives a result for an older PHP version', in_array( $health['status'], array( 'good', 'recommended' ), true ) && '' !== $health['label'], $health['label'] );
+
+// Explanations: hand-written entries, family entries built from the message, and the context.
+$x = \Airworthy\Scan\Explain::issue( 'PHPCompatibility.ParameterValues.RemovedImplodeFlexibleParamOrder.Removed', 'Passing the $glue and $pieces parameters in reverse order to implode has been deprecated since PHP 7.4 and is removed since PHP 8.0', 'error', 'plain', '8.4' );
+$check( 'Explain: implode() order has a fix with a before/after example', $x && '' !== $x['what'] && false !== strpos( $x['after'], "implode( ', '" ) && false !== strpos( $x['effect'], 'fatal error' ), wp_json_encode( $x ) );
+$x = \Airworthy\Scan\Explain::issue( 'PHPCompatibility.FunctionUse.RemovedFunctions.some_old_fnDeprecatedRemoved', 'Function some_old_fn() is deprecated since PHP 7.2 and removed since PHP 8.0; Use new_fn() instead', 'error', 'plain', '8.4' );
+$check( 'Explain: an unknown removed function gets a family explanation with the suggested replacement', $x && false !== strpos( $x['what'], 'some_old_fn()' ) && false !== strpos( $x['fix'], 'new_fn()' ), wp_json_encode( $x ) );
+$x = \Airworthy\Scan\Explain::issue( 'Airworthy.PHP86.DeprecatedFunctions.spl_object_hashDeprecated', 'Function spl_object_hash() is deprecated since PHP 8.6; Use spl_object_id() instead', 'warning', 'plain', '8.6' );
+$check( 'Explain: our own PHP 8.6 checks are explained, as deprecations that still work', $x && false !== strpos( $x['after'], 'spl_object_id' ) && false !== strpos( $x['effect'], 'Still works' ), wp_json_encode( $x ) );
+$x = \Airworthy\Scan\Explain::issue( 'PHPCompatibility.Extensions.RemovedExtensions.mysql_DeprecatedRemoved', "Extension 'mysql_' is deprecated since PHP 5.5 and removed since PHP 7.0; Use mysqli instead", 'error', 'guarded', '8.4' );
+$check( 'Explain: guarded code says there is nothing to do, and offers no fix', $x && false !== strpos( $x['effect'], 'Nothing to do' ) && '' === $x['fix'] && '' === $x['before'], wp_json_encode( $x ) );
+$x = \Airworthy\Scan\Explain::issue( 'PHPCompatibility.FunctionUse.RemovedFunctions.mysql_real_escape_stringDeprecatedRemoved', 'Function mysql_real_escape_string() is deprecated since PHP 5.5 and removed since PHP 7.0', 'error', 'plain', '8.4' );
+$check( 'Explain: old mysql_* functions point to $wpdb, not "no replacement"', $x && false !== strpos( $x['fix'], '$wpdb' ), wp_json_encode( $x ) );
+$check( 'Explain: notices and scan problems get none', null === \Airworthy\Scan\Explain::issue( 'Internal.NoCodeFound', 'No PHP code was found', 'notice', 'plain', '8.4' ) );
+$x = \Airworthy\Scan\Explain::issue( 'Some.Unknown.Rule.Found', 'Something new', 'warning', 'plain', '8.4' );
+$check( 'Explain: an unknown rule still gets what happens and a general fix', $x && '' === $x['what'] && '' !== $x['effect'] && '' !== $x['fix'] );
+list( $status, $data ) = $call( 'GET', "/scans/$scan_id/components/$comp_id/issues" );
+$check( 'REST: findings carry their explanation', 200 === $status && isset( $data[0]['explain'] ) && ( null === $data[0]['explain'] || isset( $data[0]['explain']['effect'] ) ), wp_json_encode( isset( $data[0] ) ? $data[0] : null ) );
+
+// Plugins screen badges, from the latest finished scan (the fixtures' scan in run.sh).
+\Airworthy\Admin\PluginsScreen::reset();
+$last    = $wpdb->get_row( "SELECT id, target_php FROM {$t['scans']} WHERE status = 'complete' ORDER BY id DESC LIMIT 1" ); // phpcs:ignore
+$fx_ver  = (string) $wpdb->get_var( $wpdb->prepare( "SELECT version FROM {$t['components']} WHERE scan_id = %d AND slug = 'fx-implode'", $last->id ) ); // phpcs:ignore
+$applies = version_compare( $last->target_php, Targets::minor( \Airworthy\Env::php_version() ), '>' );
+wp_set_current_user( $admin_id );
+$badge = \Airworthy\Admin\PluginsScreen::badge( 'fx-implode/fx-implode.php', array( 'Version' => $fx_ver ) );
+if ( $applies ) {
+	$check( 'Plugins screen: a scanned plugin gets its verdict, linking to its details', false !== strpos( $badge, 'Blocker' ) && false !== strpos( $badge, 'PHP ' . $last->target_php ) && false !== strpos( $badge, '#plugin:fx-implode' ), $badge );
+	$badge = \Airworthy\Admin\PluginsScreen::badge( 'fx-php86/fx-php86.php', array( 'Version' => '99.0.0' ) ); // A fixture with a Version header.
+	$check( 'Plugins screen: an updated plugin says it isn\'t checked since the update', false !== strpos( $badge, 'not checked since the update' ), $badge );
+	$meta = \Airworthy\Admin\PluginsScreen::row_meta( array( 'Version 1.0' ), 'fx-ready/fx-ready.php', array() );
+	$check( 'Plugins screen: the badge is added to the row meta', 2 === count( $meta ) && false !== strpos( $meta[1], 'airworthy-plugin-badge-ready' ), wp_json_encode( $meta ) );
+} else {
+	$check( 'Plugins screen: no badges when the server already runs the scanned PHP version', '' === $badge, $badge );
+}
+$check( 'Plugins screen: no badge for an inactive plugin that wasn\'t scanned', '' === \Airworthy\Admin\PluginsScreen::badge( 'not-installed/not-installed.php' ) );
+wp_set_current_user( (int) $editor_id );
+$check( 'Plugins screen: editors see no badges', '' === \Airworthy\Admin\PluginsScreen::badge( 'fx-implode/fx-implode.php', array( 'Version' => $fx_ver ) ) );
+wp_set_current_user( $admin_id );
 
 // PHP security releases: the server's PHP is missing the latest fixes (sample release data).
 $rel  = array(

@@ -73,12 +73,29 @@ final class SiteHealth {
 
 		$target = Targets::default_for( $php );
 		if ( ! $scan && version_compare( $target, $current, '<=' ) ) {
+			$upcoming = null;
+			foreach ( Targets::ALL as $version ) {
+				if ( version_compare( $version, $current, '>' ) && ! Targets::is_released( $version ) ) {
+					$upcoming = $version;
+					break;
+				}
+			}
 			return self::result(
 				'good',
 				/* translators: %s: PHP version. */
-				sprintf( __( 'Your site runs PHP %s, the newest version Airworthy checks', 'airworthy' ), $current ),
-				__( 'There is no newer PHP version to prepare for yet. Airworthy will check against the next one once it is released.', 'airworthy' ),
-				__( 'Open Airworthy', 'airworthy' )
+				sprintf( __( 'Your site runs PHP %s, the newest released PHP version', 'airworthy' ), $current ),
+				$upcoming ?
+					sprintf(
+						/* translators: 1: PHP version, 2: release date. */
+						__( 'PHP %1$s comes out on %2$s. Airworthy can already check your plugins and themes against its release candidate, so you know what to expect.', 'airworthy' ),
+						$upcoming,
+						date_i18n( get_option( 'date_format' ), strtotime( Targets::RELEASED[ $upcoming ] . ' 12:00:00 UTC' ) )
+					) :
+					__( 'There is no newer PHP version to prepare for yet. Airworthy will check against the next one once it is released.', 'airworthy' ),
+				$upcoming ?
+					/* translators: %s: PHP version. */
+					sprintf( __( 'Check for PHP %s', 'airworthy' ), $upcoming ) :
+					__( 'Open Airworthy', 'airworthy' )
 			);
 		}
 

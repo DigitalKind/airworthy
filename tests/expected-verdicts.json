@@ -39,6 +39,13 @@
 		"fx-static-this": {
 			"*": "ready"
 		},
+		"fx-php86": {
+			"8.6": "warnings",
+			"*": "ready"
+		},
+		"fx-php86-fake": {
+			"*": "ready"
+		},
 		"fx-data": {
 			"*": "ready"
 		},

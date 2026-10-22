@@ -59,7 +59,7 @@ SLUGS=$(php -r '$e = json_decode( file_get_contents( $argv[1] ), true ); echo im
 
 echo "==> Verdicts for every target"
 FAILED=0
-for target in 8.0 8.1 8.2 8.3 8.4 8.5; do
+for target in 8.0 8.1 8.2 8.3 8.4 8.5 8.6; do
 	OUT=$(mktemp)
 	if ! wp airworthy scan --target="$target" --only="$SLUGS" --wporg --from=5.6 --format=summary > "$OUT.log" 2>&1 \
 		|| ! wp airworthy results --format=json --fields=slug,verdict,wporg > "$OUT" 2>> "$OUT.log"; then

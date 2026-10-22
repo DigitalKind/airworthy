@@ -14,6 +14,7 @@
 	var apiFetch = window.wp.apiFetch;
 	var __       = window.wp.i18n.__;
 	var _n       = window.wp.i18n._n;
+	var _x       = window.wp.i18n._x;
 	var sprintf  = window.wp.i18n.sprintf;
 	var config   = window.airworthyConfig || {};
 	var REST     = config.rest || '/airworthy/v1';
@@ -1017,6 +1018,30 @@
 	}
 
 	/**
+	 * "What this means and how to fix it" under a finding: what it is, what happens on the
+	 * PHP version checked, the fix, and a before/after example when there is one.
+	 */
+	function explanation( x ) {
+		if ( ! x ) {
+			return null;
+		}
+		return el(
+			'details',
+			{ class: 'airworthy-explain' },
+			el( 'summary', null, __( 'What this means and how to fix it', 'airworthy' ) ),
+			x.what ? el( 'p', null, x.what ) : null,
+			x.effect ? el( 'p', null, el( 'strong', null, __( 'What happens: ', 'airworthy' ) ), x.effect ) : null,
+			x.fix ? el( 'p', null, el( 'strong', null, __( 'How to fix it: ', 'airworthy' ) ), x.fix ) : null,
+			x.before && x.after ? el(
+				'div',
+				{ class: 'airworthy-fix-example' },
+				el( 'div', null, el( 'span', { class: 'airworthy-fix-label' }, __( 'Before', 'airworthy' ) ), el( 'pre', null, el( 'code', null, x.before ) ) ),
+				el( 'div', null, el( 'span', { class: 'airworthy-fix-label' }, __( 'After', 'airworthy' ) ), el( 'pre', null, el( 'code', null, x.after ) ) )
+			) : null
+		);
+	}
+
+	/**
 	 * Loads and shows one plugin's findings, a page at a time.
 	 */
 	function loadIssues( scan, c, container, page ) {
@@ -1042,7 +1067,8 @@
 										{ class: 'airworthy-issue airworthy-sev-' + i.severity + ( CONTEXT[ i.context ] ? ' airworthy-ctx-' + i.context : '' ) },
 										el( 'span', { class: 'airworthy-sev' }, SEVERITY[ i.severity ] || i.severity, CONTEXT[ i.context ] ? ' (' + CONTEXT[ i.context ] + ')' : '' ),
 										fileLocation( i.file, i.line ),
-										el( 'span', { class: 'airworthy-msg' }, i.message )
+										el( 'span', { class: 'airworthy-msg' }, i.message ),
+										explanation( i.explain )
 									)
 								);
 							}
@@ -1119,7 +1145,7 @@
 
 		var row = el(
 			'tr',
-			{ class: 'airworthy-row airworthy-row-' + ( c.verdict || 'pending' ) },
+			{ class: 'airworthy-row airworthy-row-' + ( c.verdict || 'pending' ), 'data-component': c.type + ':' + c.slug },
 			el(
 				'td',
 				{ 'data-label': __( 'Plugin or theme', 'airworthy' ) },
@@ -1218,6 +1244,7 @@
 		clearTimeout( state.wporgTimer );
 		state.scan     = scan;
 		var components = scan.components || [];
+		var linked     = linkedComponent( scan, components );
 		var closed     = components.filter(
 			function ( c ) {
 				return c.wporg && 'closed' === c.wporg.status;
@@ -1280,13 +1307,15 @@
 			);
 		}
 
+		var firstSteps = 'complete' === scan.status ? whatToDoFirst( scan, components ) : null;
+
 		// Updates waiting for plugins with findings: often the quickest fix.
 		var withUpdates = components.filter(
 			function ( c ) {
 				return c.update && ( c.counts.errors || c.counts.warnings || c.counts.suppressed || 'unknown' === c.verdict );
 			}
 		).length;
-		var updatesNote = withUpdates ? el(
+		var updatesNote = withUpdates && ! firstSteps ? el(
 			'p',
 			{ class: 'airworthy-note airworthy-updates-note' },
 			sprintf(
@@ -1465,6 +1494,7 @@
 					)
 				),
 				headline,
+				firstSteps,
 				summary,
 				updatesNote,
 				el(
@@ -1553,10 +1583,256 @@
 		) ) {
 			loadUnchecked( scan, uncheckedCard );
 		}
-		if ( moveFocus ) {
+		if ( linked ) {
+			openLinked( linked );
+		} else if ( moveFocus ) {
 			focusHeading( views.results );
 		}
 		watchWporg( scan );
+	}
+
+	/**
+	 * "What to do first": up to three actions, most important first, from the results.
+	 * Airworthy Pro turns the same results into a full upgrade plan (linked when it's active).
+	 */
+	function whatToDoFirst( scan, components ) {
+		var own        = [ 'airworthy', 'airworthy-pro' ];
+		var items      = components.filter(
+			function ( c ) {
+				return ! ( 'plugin' === c.type && own.indexOf( c.slug ) !== -1 );
+			}
+		);
+		var closed     = items.filter(
+			function ( c ) {
+				return c.wporg && 'closed' === c.wporg.status;
+			}
+		);
+		var open       = items.filter(
+			function ( c ) {
+				return closed.indexOf( c ) === -1;
+			}
+		);
+		var urgent     = function ( c ) {
+			return 'blocker' === c.verdict || 'unknown' === c.verdict;
+		};
+		var hasUpdate  = open.filter(
+			function ( c ) {
+				return c.update && ( c.counts.errors || c.counts.warnings || c.counts.suppressed || 'unknown' === c.verdict );
+			}
+		);
+		var listed     = function ( c ) {
+			return 'plugin' === c.type && c.wporg && c.wporg.status && 'not_listed' !== c.wporg.status && 'unreachable' !== c.wporg.status;
+		};
+		var abandoned  = open.filter(
+			function ( c ) {
+				return ! c.update && listed( c ) && c.wporg.abandoned && 'ready' !== c.verdict && 'guarded' !== c.verdict;
+			}
+		);
+		var stuck      = open.filter(
+			function ( c ) {
+				return ! c.update && 'blocker' === c.verdict && abandoned.indexOf( c ) === -1;
+			}
+		);
+		var askAuthors = stuck.filter( listed );
+		var sendCustom = stuck.filter(
+			function ( c ) {
+				return ! listed( c );
+			}
+		);
+		var unread     = open.filter(
+			function ( c ) {
+				return ! c.update && 'unknown' === c.verdict && abandoned.indexOf( c ) === -1;
+			}
+		);
+		var details    = function ( c ) {
+			return el( 'a', { href: '#' + c.type + ':' + encodeURIComponent( c.slug ) }, __( 'See the details', 'airworthy' ) );
+		};
+		var step       = function ( title, text, link ) {
+			return el( 'li', null, el( 'strong', null, title ), ' ', text, ' ', link );
+		};
+
+		var steps      = [];
+		var updateStep = hasUpdate.length ? step(
+			/* translators: %s: plugin or theme names. */
+			sprintf( __( 'Update %s.', 'airworthy' ), names( hasUpdate ) ),
+			__( 'An update is waiting, and updates often fix exactly these findings. Airworthy checks again by itself afterwards.', 'airworthy' ),
+			scan.updates_url ? el( 'a', { href : scan.updates_url }, __( 'Go to Updates', 'airworthy' ) ) : details( hasUpdate[0] )
+		) : null;
+		var closedOn  = closed.filter(
+			function ( c ) {
+				return c.active;
+			}
+		);
+		var closedOff = closed.filter(
+			function ( c ) {
+				return ! c.active;
+			}
+		);
+		if ( closedOn.length ) {
+			steps.push(
+				step(
+					/* translators: %s: plugin names. */
+					sprintf( __( 'Replace %s.', 'airworthy' ), names( closedOn ) ),
+					_n( 'It was removed from WordPress.org, so no more fixes will come, security fixes included. Look for a maintained plugin that does the same job.', 'They were removed from WordPress.org, so no more fixes will come, security fixes included. Look for maintained plugins that do the same jobs.', closedOn.length, 'airworthy' ),
+					details( closedOn[0] )
+				)
+			);
+		}
+		// An update for a Blocker or Unknown comes next; one that only clears Warnings can wait.
+		if ( updateStep && hasUpdate.some( urgent ) ) {
+			steps.push( updateStep );
+			updateStep = null;
+		}
+		if ( askAuthors.length ) {
+			steps.push(
+				step(
+					/* translators: %s: plugin names. */
+					sprintf( __( 'Ask the developers of %s for a fix.', 'airworthy' ), names( askAuthors ) ),
+					_n( 'There\'s no update that fixes it yet. Post in its support forum on WordPress.org with the details (Copy summary gives you the list), or replace it if nobody answers.', 'There\'s no update that fixes them yet. Post in their support forums on WordPress.org with the details (Copy summary gives you the list), or replace them if nobody answers.', askAuthors.length, 'airworthy' ),
+					el(
+						'a',
+						{ href: 'https://wordpress.org/support/plugin/' + encodeURIComponent( askAuthors[0].slug ) + '/', target: '_blank', rel: 'noopener' },
+						__( 'Support forum', 'airworthy' ),
+						el( 'span', { class: 'screen-reader-text' }, __( '(opens in a new tab)', 'airworthy' ) )
+					)
+				)
+			);
+		}
+		if ( sendCustom.length ) {
+			steps.push(
+				step(
+					/* translators: %s: plugin or theme names. */
+					sprintf( _n( 'Send the findings for %s to its developer.', 'Send the findings for %s to their developers.', sendCustom.length, 'airworthy' ), names( sendCustom ) ),
+					_n( 'It doesn\'t come from WordPress.org, so only whoever sold or wrote it can fix it. Copy summary gives you the list to send.', 'They don\'t come from WordPress.org, so only whoever sold or wrote them can fix them. Copy summary gives you the list to send.', sendCustom.length, 'airworthy' ),
+					details( sendCustom[0] )
+				)
+			);
+		}
+		if ( unread.length ) {
+			steps.push(
+				step(
+					/* translators: %s: plugin or theme names. */
+					sprintf( __( 'Check why %s couldn\'t be fully read.', 'airworthy' ), names( unread ) ),
+					__( 'Some files couldn\'t be checked, so there\'s no verdict yet. The details list which files and why.', 'airworthy' ),
+					details( unread[0] )
+				)
+			);
+		}
+		// Inactive closed plugins can't break the upgrade, so deleting them comes after.
+		if ( closedOff.length ) {
+			steps.push(
+				step(
+					/* translators: %s: plugin names. */
+					sprintf( __( 'Delete %s.', 'airworthy' ), names( closedOff ) ),
+					_n( 'It was removed from WordPress.org and isn\'t active on your site, but its files are still on the server.', 'They were removed from WordPress.org and aren\'t active on your site, but their files are still on the server.', closedOff.length, 'airworthy' ),
+					details( closedOff[0] )
+				)
+			);
+		}
+		if ( updateStep ) {
+			steps.push( updateStep );
+		}
+		if ( abandoned.length ) {
+			steps.push(
+				step(
+					/* translators: %s: plugin names. */
+					sprintf( __( 'Plan to replace %s.', 'airworthy' ), names( abandoned ) ),
+					_n( 'It has findings and hasn\'t been updated in over two years, so a fix is unlikely.', 'They have findings and haven\'t been updated in over two years, so fixes are unlikely.', abandoned.length, 'airworthy' ),
+					details( abandoned[0] )
+				)
+			);
+		}
+		if ( ! steps.length ) {
+			return null; // The headline already says what to do.
+		}
+		var more = steps.length > 3 ? steps.length - 3 : 0;
+		return el(
+			'section',
+			{ class: 'airworthy-first-steps', 'aria-labelledby': 'airworthy-first-steps-title' },
+			el( 'h3', { id: 'airworthy-first-steps-title' }, __( 'What to do first', 'airworthy' ) ),
+			el( 'ol', null, steps.slice( 0, 3 ) ),
+			el(
+				'p',
+				null,
+				more ?
+					/* translators: 1: number of further steps, 2: PHP version. */
+					sprintf( _n( 'Then %1$d more step, in the results below. When they\'re done, back up the site and try PHP %2$s on a staging copy before you switch the live site.', 'Then %1$d more steps, in the results below. When they\'re done, back up the site and try PHP %2$s on a staging copy before you switch the live site.', more, 'airworthy' ), more, scan.target_php ) :
+					/* translators: %s: PHP version. */
+					sprintf( __( 'Then back up the site and try PHP %s on a staging copy before you switch the live site.', 'airworthy' ), scan.target_php ),
+				config.planUrl ? [ ' ', el( 'a', { href : config.planUrl }, __( 'Open your full upgrade plan', 'airworthy' ) ) ] : null
+			)
+		);
+	}
+
+	/**
+	 * "A", "A and B", "A, B and 3 more".
+	 */
+	function names( list ) {
+		var n = list.map(
+			function ( c ) {
+				return c.name;
+			}
+		);
+		if ( 1 === n.length ) {
+			return n[0];
+		}
+		if ( 2 === n.length ) {
+			/* translators: 1: plugin or theme name, 2: plugin or theme name. */
+			return sprintf( _x( '%1$s and %2$s', 'two plugin or theme names', 'airworthy' ), n[0], n[1] );
+		}
+		/* translators: 1: name, 2: name, 3: how many more. */
+		return sprintf( _n( '%1$s, %2$s and %3$d more', '%1$s, %2$s and %3$d more', n.length - 2, 'airworthy' ), n[0], n[1], n.length - 2 );
+	}
+
+	/**
+	 * The plugin or theme a link asked for (#plugin:<slug>, from the badges on the Plugins
+	 * screen), once per page load. Its group is opened before the results are drawn.
+	 */
+	function linkedComponent( scan, components ) {
+		var m = ! state.linkDone && /^#(plugin|theme):(.+)$/.exec( window.location.hash );
+		if ( ! m ) {
+			return null;
+		}
+		state.linkDone = true;
+		var slug       = decodeURIComponent( m[2] );
+		var c          = components.filter(
+			function ( item ) {
+				return item.type === m[1] && item.slug === slug;
+			}
+		)[0];
+		if ( ! c ) {
+			return null;
+		}
+		var group = resultGroups( scan, [ c ] )[0];
+		if ( group ) {
+			state.groupOpen[ group.key ] = true;
+		}
+		return c;
+	}
+
+	/**
+	 * Opens the linked row's details, scrolls to it and moves focus there.
+	 */
+	function openLinked( c ) {
+		var key = c.type + ':' + c.slug;
+		var row = Array.prototype.filter.call(
+			views.results.querySelectorAll( 'tr[data-component]' ),
+			function ( tr ) {
+				return tr.getAttribute( 'data-component' ) === key;
+			}
+		)[0];
+		if ( ! row ) {
+			return;
+		}
+		var toggle = row.querySelector( 'button[aria-controls]' );
+		if ( toggle && 'true' !== toggle.getAttribute( 'aria-expanded' ) ) {
+			toggle.click();
+		}
+		row.classList.add( 'airworthy-row-linked' );
+		row.scrollIntoView( { block: 'center' } );
+		if ( toggle ) {
+			toggle.focus( { preventScroll: true } );
+		}
 	}
 
 	/**
@@ -1779,6 +2055,17 @@
 		};
 		state.wporgTimer = setTimeout( check, POLL_MS );
 	}
+
+	// A new #plugin:<slug> link while the results are on screen: open that one.
+	window.addEventListener(
+		'hashchange',
+		function () {
+			if ( state.scan && ! views.results.hidden && /^#(plugin|theme):/.test( window.location.hash ) ) {
+				state.linkDone = false;
+				renderResults( state.scan );
+			}
+		}
+	);
 
 	// ---------------------------------------------------------------------------------------
 	// Boot: show whatever state the site is in.

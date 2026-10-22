@@ -409,7 +409,7 @@ final class Command {
 		foreach ( Targets::ALL as $target ) {
 			$rows[] = array(
 				'php'         => $target,
-				'security'    => Targets::is_supported( $target ) ? 'supported' : 'ended',
+				'security'    => Targets::is_released( $target ) ? ( Targets::is_supported( $target ) ? 'supported' : 'ended' ) : 'release candidate',
 				'until'       => (string) Targets::security_until( $target ),
 				'recommended' => $target === $default ? 'yes' : '',
 			);

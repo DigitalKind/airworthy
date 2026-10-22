@@ -73,6 +73,8 @@ jobs:
     name: PHP ${{ matrix.php }} · WP ${{ matrix.wp }}${{ matrix.multisite && ' · multisite' || '' }} · ${{ matrix.db || 'mysql:8.0' }}
     needs: build
     runs-on: ubuntu-24.04
+    # PHP 8.6 is a release candidate until 19 Nov 2026: its job reports but doesn't fail the run.
+    continue-on-error: ${{ matrix.experimental == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -90,6 +92,10 @@ jobs:
           - php: '8.2'
             wp: 'latest'
             multisite: true
+          # Airworthy itself on PHP 8.6 (release candidate until 19 Nov 2026; drop "experimental" after).
+          - php: '8.6'
+            wp: 'latest'
+            experimental: true
     services:
       database:
         image: ${{ matrix.db || 'mysql:8.0' }}

@@ -45,6 +45,7 @@ final class Plugin {
 		if ( is_admin() ) {
 			( new Admin\Page() )->register();
 			Admin\Notice::register();
+			Admin\PluginsScreen::register();
 			Admin\Export::register();
 			Settings::register();
 		}

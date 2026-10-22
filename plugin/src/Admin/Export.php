@@ -117,7 +117,7 @@ final class Export {
 		$scan_id = (int) $scan->id;
 		fwrite( $out, "\xEF\xBB\xBF" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- UTF-8 BOM so spreadsheets read accents correctly.
 
-		fputcsv( $out, array( 'Target PHP', 'Type', 'Name', 'Slug', 'Version', 'Active', 'Verdict', 'Errors', 'Suppressed', 'Guarded', 'Warnings', 'WordPress.org', 'Closed', 'Closed reason', 'Last updated', 'Abandoned', 'Tested up to', 'Requires PHP', 'Update available', 'File', 'Line', 'Severity', 'Context', 'Rule', 'Message' ), ',', '"', '\\' );
+		fputcsv( $out, array( 'Target PHP', 'Type', 'Name', 'Slug', 'Version', 'Active', 'Verdict', 'Errors', 'Suppressed', 'Guarded', 'Warnings', 'WordPress.org', 'Closed', 'Closed reason', 'Last updated', 'Abandoned', 'Tested up to', 'Requires PHP', 'Update available', 'File', 'Line', 'Severity', 'Context', 'Rule', 'Message', 'Explanation' ), ',', '"', '\\' );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
 		$components = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM %i WHERE scan_id = %d ORDER BY FIELD(verdict, 'blocker','unknown','suppressed','guarded','warnings','ready'), name", $t['components'], $scan_id ) );
@@ -147,10 +147,12 @@ final class Export {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table.
 			$issues = (array) $wpdb->get_results( $wpdb->prepare( "SELECT file, line, severity, context, rule, message FROM %i WHERE component_id = %d ORDER BY FIELD(severity, 'scan','error','warning','notice'), file, line", $t['issues'], $c->id ) );
 			if ( ! $issues ) {
-				fputcsv( $out, self::safe( array_merge( $base, array( '', '', '', '', '', '' ) ) ), ',', '"', '\\' );
+				fputcsv( $out, self::safe( array_merge( $base, array( '', '', '', '', '', '', '' ) ) ), ',', '"', '\\' );
 			}
 			foreach ( $issues as $i ) {
-				fputcsv( $out, self::safe( array_merge( $base, array( $i->file, (int) $i->line, $i->severity, $i->context, $i->rule, $i->message ) ) ), ',', '"', '\\' );
+				$explain = \Airworthy\Scan\Explain::issue( $i->rule, $i->message, $i->severity, $i->context, $scan->target_php );
+				$text    = $explain ? trim( $explain['what'] . ' ' . $explain['effect'] . ' ' . $explain['fix'] ) : '';
+				fputcsv( $out, self::safe( array_merge( $base, array( $i->file, (int) $i->line, $i->severity, $i->context, $i->rule, $i->message, $text ) ) ), ',', '"', '\\' );
 			}
 		}
 	}

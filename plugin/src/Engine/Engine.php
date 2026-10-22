@@ -70,7 +70,8 @@ final class Engine {
 	}
 
 	/**
-	 * Boots PHP_CodeSniffer with the PHPCompatibilityWP ruleset for one target version.
+	 * Boots PHP_CodeSniffer with the PHPCompatibilityWP ruleset, plus Airworthy's own checks for
+	 * newer PHP versions (standards/Airworthy), for one target version.
 	 *
 	 * @param string $target Exact PHP version, e.g. "8.4".
 	 * @throws \RuntimeException When the engine is missing or fails to start.
@@ -96,7 +97,7 @@ final class Engine {
 
 		$config = new $config_class(
 			array(
-				'--standard=PHPCompatibilityWP',
+				'--standard=PHPCompatibilityWP,Airworthy', // Our own checks for PHP versions PHPCompatibility doesn't know yet (standards/Airworthy).
 				'--runtime-set',
 				'testVersion',
 				$target,
@@ -106,7 +107,9 @@ final class Engine {
 			)
 		);
 		// Temporary (in-memory) setting: never writes a config file to disk.
-		$config->setConfigData( 'installed_paths', implode( ',', array_filter( (array) glob( $vendor . 'phpcompatibility/*' ), 'is_dir' ) ), true );
+		$paths   = array_filter( (array) glob( $vendor . 'phpcompatibility/*' ), 'is_dir' );
+		$paths[] = AIRWORTHY_DIR . 'standards';
+		$config->setConfigData( 'installed_paths', implode( ',', $paths ), true );
 
 		$this->runner         = new $runner_class();
 		$this->runner->config = $config;
