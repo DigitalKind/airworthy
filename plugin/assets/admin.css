@@ -938,36 +938,82 @@
 	font-size: 12px;
 }
 
-/* Scan | Settings tabs. */
+/* Header and tab bar: one white panel, so the tabs read as the screen's navigation. */
 
-.airworthy-wrap .airworthy-tabs {
-	margin: 16px 0 0;
-	padding: 0;
-	border-bottom: 1px solid var(--aw-line);
+.airworthy-masthead {
+	margin: 20px 0 20px;
+	background: #fff;
+	border: 1px solid var(--aw-line);
+	border-radius: var(--aw-radius);
+	box-shadow: var(--aw-shadow);
 }
 
-.airworthy-wrap .airworthy-tabs .nav-tab {
-	margin: 0 4px -1px 0;
-	padding: 8px 18px;
+.airworthy-masthead .airworthy-brand {
+	margin: 0;
+	padding: 20px 24px 16px;
+}
+
+.airworthy-wrap .airworthy-tabs {
+	position: relative;
+	display: flex;
+	gap: 4px;
+	margin: 0;
+	padding: 0 16px;
+	border-top: 1px solid var(--aw-line);
+	overflow-x: auto;
+	scrollbar-width: thin;
+}
+
+.airworthy-wrap .airworthy-tab {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 14px 12px 11px;
 	font-size: 14px;
-	font-weight: 500;
-	border: 1px solid transparent;
-	border-radius: 8px 8px 0 0;
-	background: transparent;
+	font-weight: 600;
+	line-height: 1.4;
+	color: #3c434a;
+	text-decoration: none;
+	white-space: nowrap;
+	border-bottom: 3px solid transparent;
+}
+
+.airworthy-wrap .airworthy-tab .dashicons {
+	width: 18px;
+	height: 18px;
+	font-size: 18px;
 	color: var(--aw-muted);
 }
 
-.airworthy-wrap .airworthy-tabs .nav-tab:hover {
+.airworthy-wrap .airworthy-tab:hover {
 	color: var(--aw-ink);
-	background: #fff;
+	border-bottom-color: #c3c4c7;
 }
 
-.airworthy-wrap .airworthy-tabs .nav-tab-active,
-.airworthy-wrap .airworthy-tabs .nav-tab-active:hover {
+.airworthy-wrap .airworthy-tab:focus {
+	outline: none;
+	box-shadow: inset 0 0 0 2px var(--aw-blue);
+	border-radius: 6px 6px 0 0;
+}
+
+.airworthy-wrap .airworthy-tab.is-active,
+.airworthy-wrap .airworthy-tab.is-active .dashicons {
 	color: var(--aw-blue);
-	background: #fff;
-	border-color: var(--aw-line);
-	border-bottom-color: #fff;
+}
+
+.airworthy-wrap .airworthy-tab.is-active {
+	border-bottom-color: var(--aw-blue);
+}
+
+@media screen and (max-width: 782px) {
+
+	.airworthy-masthead .airworthy-brand {
+		padding: 16px;
+	}
+
+	.airworthy-wrap .airworthy-tabs {
+		padding: 0 8px;
+	}
 }
 
 /* Settings tab. */

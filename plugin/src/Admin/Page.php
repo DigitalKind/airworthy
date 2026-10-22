@@ -117,6 +117,39 @@ final class Page {
 	}
 
 	/**
+	 * One tab in the header's tab bar, with its icon.
+	 *
+	 * @param string $slug    Tab slug.
+	 * @param string $label   Tab label.
+	 * @param string $url     Tab URL.
+	 * @param string $current The tab being shown.
+	 */
+	private static function tab_link( $slug, $label, $url, $current ) {
+		/**
+		 * Filters the tab icons: slug => Dashicons class (e.g. "dashicons-chart-bar").
+		 *
+		 * @param array $icons slug => class.
+		 */
+		$icons  = (array) apply_filters(
+			'airworthy_admin_tab_icons',
+			array(
+				'scan'     => 'dashicons-search',
+				'settings' => 'dashicons-admin-generic',
+			)
+		);
+		$icon   = isset( $icons[ $slug ] ) ? sanitize_html_class( (string) $icons[ $slug ] ) : '';
+		$active = $slug === $current;
+		printf(
+			'<a href="%1$s" class="airworthy-tab%2$s"%3$s>%4$s<span>%5$s</span></a>',
+			esc_url( $url ),
+			$active ? ' is-active' : '',
+			$active ? ' aria-current="page"' : '',
+			'' !== $icon ? '<span class="dashicons ' . esc_attr( $icon ) . '" aria-hidden="true"></span>' : '',
+			esc_html( $label )
+		);
+	}
+
+	/**
 	 * Extra tabs on the Airworthy screen, from add-ons: slug => label. Each is drawn by the
 	 * "airworthy_render_tab_{slug}" action.
 	 *
@@ -243,33 +276,38 @@ final class Page {
 		$default      = Targets::default_for( $current );
 		?>
 		<div class="wrap airworthy-wrap">
-			<div class="airworthy-brand">
-				<svg class="airworthy-logo" viewBox="0 0 64 64" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="airworthy-logo-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2f74e8"/><stop offset="1" stop-color="#1747a6"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#airworthy-logo-bg)"/><path d="M12 36.5 L23 47 L37.5 29.5" fill="none" stroke="#8fe3a8" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(45.5 20) rotate(40) scale(0.5) translate(-32 -32)"><path fill="#ffffff" d="M32 4c2.4 0 3.8 3 3.8 6.5V25l21.2 12.5v5.2L35.8 35.6V48l7.2 5.4V58L32 54.8 21 58v-4.6l7.2-5.4V35.6L7 42.7v-5.2L28.2 25V10.5C28.2 7 29.6 4 32 4z"/></g></svg>
-				<div>
-					<?php
-					/**
-					 * Filters a short badge shown after the screen's title (Airworthy Pro shows "Pro").
-					 *
-					 * @param string $badge Badge text; empty for none.
-					 */
-					$badge = (string) apply_filters( 'airworthy_admin_badge', '' );
-					?>
-					<h1><?php echo esc_html( get_admin_page_title() ); ?>
-					<?php
-					if ( '' !== $badge ) :
-						?>
-						<span class="airworthy-edition"><?php echo esc_html( $badge ); ?></span><?php endif; ?></h1>
-					<p class="airworthy-lede"><?php esc_html_e( 'Before you upgrade PHP, see which plugins and themes are ready, which need fixing, and what to do next.', 'airworthy' ); ?></p>
-				</div>
-			</div>
+			<?php // Other plugins' notices go here, above the header, so the header and tabs stay together. ?>
 			<hr class="wp-header-end" />
-			<nav class="nav-tab-wrapper airworthy-tabs" aria-label="<?php esc_attr_e( 'Airworthy', 'airworthy' ); ?>">
-				<a href="<?php echo esc_url( self::url() ); ?>" class="nav-tab<?php echo 'scan' === $tab ? ' nav-tab-active' : ''; ?>"<?php echo 'scan' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Scan', 'airworthy' ); ?></a>
-				<a href="<?php echo esc_url( add_query_arg( 'tab', 'settings', self::url() ) ); ?>" class="nav-tab<?php echo 'settings' === $tab ? ' nav-tab-active' : ''; ?>"<?php echo 'settings' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Settings', 'airworthy' ); ?></a>
-				<?php foreach ( $extra_tabs as $slug => $label ) : ?>
-					<a href="<?php echo esc_url( add_query_arg( 'tab', $slug, self::url() ) ); ?>" class="nav-tab<?php echo $slug === $tab ? ' nav-tab-active' : ''; ?>"<?php echo $slug === $tab ? ' aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?></a>
-				<?php endforeach; ?>
-			</nav>
+			<header class="airworthy-masthead">
+				<div class="airworthy-brand">
+					<svg class="airworthy-logo" viewBox="0 0 64 64" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="airworthy-logo-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2f74e8"/><stop offset="1" stop-color="#1747a6"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#airworthy-logo-bg)"/><path d="M12 36.5 L23 47 L37.5 29.5" fill="none" stroke="#8fe3a8" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(45.5 20) rotate(40) scale(0.5) translate(-32 -32)"><path fill="#ffffff" d="M32 4c2.4 0 3.8 3 3.8 6.5V25l21.2 12.5v5.2L35.8 35.6V48l7.2 5.4V58L32 54.8 21 58v-4.6l7.2-5.4V35.6L7 42.7v-5.2L28.2 25V10.5C28.2 7 29.6 4 32 4z"/></g></svg>
+					<div>
+						<?php
+						/**
+						 * Filters a short badge shown after the screen's title (Airworthy Pro shows "Pro").
+						 *
+						 * @param string $badge Badge text; empty for none.
+						 */
+						$badge = (string) apply_filters( 'airworthy_admin_badge', '' );
+						?>
+						<h1><?php echo esc_html( get_admin_page_title() ); ?>
+						<?php
+						if ( '' !== $badge ) :
+							?>
+							<span class="airworthy-edition"><?php echo esc_html( $badge ); ?></span><?php endif; ?></h1>
+						<p class="airworthy-lede"><?php esc_html_e( 'Before you upgrade PHP, see which plugins and themes are ready, which need fixing, and what to do next.', 'airworthy' ); ?></p>
+					</div>
+				</div>
+				<nav class="airworthy-tabs" aria-label="<?php esc_attr_e( 'Airworthy', 'airworthy' ); ?>">
+					<?php
+					self::tab_link( 'scan', __( 'Scan', 'airworthy' ), self::url(), $tab );
+					self::tab_link( 'settings', __( 'Settings', 'airworthy' ), add_query_arg( 'tab', 'settings', self::url() ), $tab );
+					foreach ( $extra_tabs as $slug => $label ) {
+						self::tab_link( $slug, $label, add_query_arg( 'tab', $slug, self::url() ), $tab );
+					}
+					?>
+				</nav>
+			</header>
 			<?php
 			if ( 'settings' === $tab ) {
 				self::render_settings();

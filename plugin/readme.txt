@@ -4,7 +4,7 @@ Tags: php compatibility, php upgrade, php version, php 8, compatibility
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.2
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -143,9 +143,17 @@ PHP 8.0, 8.1, 8.2, 8.3, 8.4, 8.5 and 8.6. Versions that no longer get security f
 
 Yes. PHP 8.6 doesn't remove any functions or extensions, so it shouldn't break a site that works on PHP 8.5. It deprecates about 30 things, such as `spl_object_hash()`, `is_long()` and `is_integer()`, `return` inside a `finally` block and returning a value from a constructor. Code that uses them still works on 8.6 but will stop working in a later version, so Airworthy shows them as Warnings, with the replacement. PHPCompatibility, the open-source ruleset Airworthy builds on, doesn't cover PHP 8.6 yet, so these checks are Airworthy's own (in the plugin's `standards/Airworthy` folder). A few 8.6 deprecations only show when code runs, with particular values, and can't be found by reading code.
 
+= Why can't my site update to WordPress 7.0 or later? =
+
+WordPress 7.0 needs PHP 7.4 or newer. On PHP 7.2 or 7.3, WordPress won't offer the update, so the site stays on WordPress 6.9. The way forward is a newer PHP version, and that's what Airworthy checks for: it runs on PHP 7.2 and up, so install it on the site as it is. Then check your plugins and theme against the version your host can move you to. Aim for PHP 8.2 or newer rather than 7.4, which no longer gets security fixes. Once the PHP switch is done, WordPress offers the update as usual.
+
 = Why do I now see Tools > Scheduled Actions? =
 
 That menu comes from Action Scheduler, the background-job library Airworthy uses (WooCommerce uses the same one). It's harmless, and lists Airworthy's jobs under the "airworthy" group.
+
+= Do I need an account, licence or subscription to see the results? =
+
+No. Every verdict, finding, explanation and export is free, on as many sites as you like, with no account, licence key or sign-up. The scan runs on your own server, and your plugins' code never leaves your site. The only outside request is the optional WordPress.org lookup, which you choose before each scan and which sends only plugin folder names (see Privacy).
 
 = Can I use Airworthy on client sites? =
 
@@ -171,6 +179,10 @@ Email security@airworthywp.com. Please don't post it in the public support forum
 8. Each plugin's verdict on the Plugins screen, linking to its details.
 
 == Changelog ==
+
+= 1.1.2 =
+* Improved: the screen's title and tabs are now one panel, with an icon on each tab and a blue line under the open one, so the tabs are easy to spot. Notices from other plugins now appear above Airworthy's header instead of between the title and the tabs. On a phone the tabs scroll sideways and the open tab is brought into view.
+* Readme: new answers on whether you need an account or licence to see results (you don't), and on why a site on PHP 7.2 or 7.3 can't update to WordPress 7.0.
 
 = 1.1.1 =
 * Fix: the PHP security-fixes check no longer calls a patched server unpatched. CloudLinux, cPanel, Plesk, Debian, Ubuntu and Red Hat ship PHP security fixes as an update that keeps the old version number, so a version below php.net's fixed release doesn't mean the fixes are missing. Airworthy now reads when your PHP was built: built on or after the release day, it very likely has the fixes (shown as good, with a note to confirm with your host); built before, on one of those hosts, Airworthy asks you to get your host to apply the PHP update; built before anywhere else, it's still flagged as missing them. When the build date can't be read, Airworthy says it can't tell from the version alone instead of raising an alarm. Nothing is sent anywhere: the build date and vendor are read on your server.
@@ -209,6 +221,9 @@ Email security@airworthywp.com. Please don't post it in the public support forum
 * CSV export and WP-CLI commands.
 
 == Upgrade Notice ==
+
+= 1.1.2 =
+A clearer header and tab bar on the Airworthy screen.
 
 = 1.1.1 =
 Fixes a false "missing security fixes" alarm on hosts that ship PHP fixes without changing the version number (CloudLinux, cPanel, Plesk, Debian, Ubuntu, Red Hat).

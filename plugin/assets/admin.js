@@ -22,6 +22,12 @@
 	var POLL_MS        = 4000;         // How often the progress view asks for news.
 	var NUDGE_AFTER_MS = 20000; // No progress for this long: run a batch from this page.
 
+	// On a narrow screen the tab bar scrolls sideways: bring the open tab into view.
+	var activeTab = document.querySelector( '.airworthy-tab.is-active' );
+	if ( activeTab && activeTab.parentNode.scrollWidth > activeTab.parentNode.clientWidth ) {
+		activeTab.parentNode.scrollLeft = activeTab.offsetLeft - 16;
+	}
+
 	var views = {
 		start: document.getElementById( 'airworthy-start' ),
 		progress: document.getElementById( 'airworthy-progress' ),
