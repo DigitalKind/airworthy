@@ -123,6 +123,8 @@
 		lastChange: Date.now(),
 		nudging: false,
 		groupOpen: {}, // Results groups the user opened or closed, by key.
+		rescanned: null, // The plugin or theme just sent for a rescan, with its verdict before.
+		fixed: null, // { scan, name }: a rescan cleared a Blocker (kept for redraws).
 		lastAnnounced: -1,
 	};
 	var live  = document.getElementById( 'airworthy-live' );
@@ -1131,6 +1133,8 @@
 			'button',
 			{ type: 'button', class: 'button-link', 'aria-label': sprintf( /* translators: %s: plugin or theme name. */ __( 'Rescan %s', 'airworthy' ), c.name ), onclick: function () {
 				rescan.disabled = true;
+				// Remembered so the results can say "fixed" if the rescan clears a Blocker.
+				state.rescanned = { key: c.type + ':' + c.slug, verdict: c.verdict, name: c.name };
 				apiFetch( { path: REST + '/scans/' + scan.id + '/components/' + c.id + '/rescan', method: 'POST' } ).then(
 					function ( s ) {
 						state.scan = s;
@@ -1314,6 +1318,12 @@
 		}
 
 		var firstSteps = 'complete' === scan.status ? whatToDoFirst( scan, components ) : null;
+
+		// The review request goes near the top at a good moment (nothing to fix, or a rescan just
+		// cleared a Blocker), and at the bottom otherwise.
+		var fixed  = 'complete' === scan.status ? fixedByRescan( scan, components ) : '';
+		var happy  = 'complete' === scan.status && ( '' !== fixed || ( ! counts.blocker && ! counts.unknown ) );
+		var review = 'complete' === scan.status && config.review ? reviewCard( fixed ) : null;
 
 		// Updates waiting for plugins with findings: often the quickest fix.
 		var withUpdates = components.filter(
@@ -1501,6 +1511,7 @@
 				),
 				headline,
 				firstSteps,
+				happy ? review : null,
 				summary,
 				updatesNote,
 				el(
@@ -1579,7 +1590,7 @@
 					}
 				) : el( 'tbody', null, el( 'tr', null, el( 'td', { colspan: 5 }, __( 'No plugins or themes were checked in this scan.', 'airworthy' ) ) ) )
 			),
-			'complete' === scan.status && config.review ? reviewCard() : null
+			happy ? null : review
 		);
 		show( 'results' );
 		if ( components.some(
@@ -1966,10 +1977,41 @@
 	}
 
 	/**
-	 * "Did Airworthy help?" below the results of a finished scan. Asked once per user: Leave a
-	 * review and Don't ask again end it, Maybe later asks again in 30 days.
+	 * The name of the plugin or theme whose rescan just took it from Blocker or Unknown to a
+	 * verdict that doesn't block the upgrade, or ''. Remembered for later redraws of the same scan.
 	 */
-	function reviewCard() {
+	function fixedByRescan( scan, components ) {
+		if ( state.fixed && state.fixed.scan === scan.id ) {
+			return state.fixed.name;
+		}
+		var before = state.rescanned;
+		if ( ! before ) {
+			return '';
+		}
+		state.rescanned = null;
+		if ( 'blocker' !== before.verdict && 'unknown' !== before.verdict ) {
+			return '';
+		}
+		var now = components.filter(
+			function ( c ) {
+				return c.type + ':' + c.slug === before.key;
+			}
+		)[0];
+		if ( ! now || ! now.verdict || 'blocker' === now.verdict || 'unknown' === now.verdict ) {
+			return '';
+		}
+		state.fixed = { scan: scan.id, name: now.name };
+		return now.name;
+	}
+
+	/**
+	 * "Did Airworthy help?" on the results of a finished scan: near the top when the news is good
+	 * or a rescan just fixed something, otherwise below the results. Asked once per user: Leave a
+	 * review and Don't ask again end it, Maybe later asks again in 30 days.
+	 *
+	 * @param {string} fixed Name of the plugin or theme a rescan just fixed, or ''.
+	 */
+	function reviewCard( fixed ) {
 		var card   = null;
 		var answer = function ( choice ) {
 			config.review = null; // Not again on this page.
@@ -1984,7 +2026,14 @@
 		card       = el(
 			'div',
 			{ class: 'airworthy-card airworthy-review' },
-			el( 'h3', null, __( 'Did Airworthy help?', 'airworthy' ) ),
+			el(
+				'h3',
+				null,
+				fixed ?
+					/* translators: %s: plugin or theme name. */
+					sprintf( __( '%s no longer blocks the upgrade. Did Airworthy help?', 'airworthy' ), fixed ) :
+					__( 'Did Airworthy help?', 'airworthy' )
+			),
 			el( 'p', null, __( 'Airworthy is free. A short review on WordPress.org helps other site owners find it before their own PHP upgrade, and takes about a minute.', 'airworthy' ) ),
 			el(
 				'p',

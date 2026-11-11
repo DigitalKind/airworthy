@@ -46,7 +46,7 @@ final class Targets {
 	);
 
 	/** When SECURITY_UNTIL was last checked against php.net. */
-	const TABLE_CHECKED = '2026-10-21';
+	const TABLE_CHECKED = '2026-11-11';
 
 	/**
 	 * The latest PHP security release Airworthy knows about (from php.net's release notes),

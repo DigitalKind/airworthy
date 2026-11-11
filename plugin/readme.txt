@@ -4,7 +4,7 @@ Tags: php compatibility, php upgrade, php version, php 8, compatibility
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.2
-Stable tag: 1.1.2
+Stable tag: 1.1.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -201,6 +201,9 @@ Email security@airworthywp.com. Please don't post it in the public support forum
 
 == Changelog ==
 
+= 1.1.3 =
+* Improved: the "Did Airworthy help?" request now appears at a good moment. When there's nothing left to fix, or a rescan has just cleared a Blocker, it sits near the top of the results and names the plugin you fixed. Otherwise it stays below the results. It is still asked once, and "Maybe later" asks again in 30 days.
+
 = 1.1.2 =
 * Improved: the screen's title and tabs are now one panel, with an icon on each tab and a blue line under the open one, so the tabs are easy to spot. Notices from other plugins now appear above Airworthy's header instead of between the title and the tabs. On a phone the tabs scroll sideways and the open tab is brought into view.
 * Readme: new answers on whether you need an account or licence to see results (you don't), and on why a site on PHP 7.2 or 7.3 can't update to WordPress 7.0.
@@ -242,6 +245,9 @@ Email security@airworthywp.com. Please don't post it in the public support forum
 * CSV export and WP-CLI commands.
 
 == Upgrade Notice ==
+
+= 1.1.3 =
+The review request now shows at a better moment, when your results are good or a rescan has fixed something.
 
 = 1.1.2 =
 A clearer header and tab bar on the Airworthy screen.
