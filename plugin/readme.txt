@@ -4,11 +4,11 @@ Tags: php compatibility, php upgrade, php version, php 8, compatibility
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.2
-Stable tag: 1.1.3
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-PHP compatibility checker for your PHP upgrade: see which plugins and themes are ready for PHP 8, which need fixing, and which look abandoned.
+PHP compatibility checker for PHP 8.0 to 8.6: see which plugins and themes are ready, which need fixing, and which look abandoned.
 
 == Description ==
 
@@ -28,6 +28,8 @@ Airworthy is a PHP compatibility scanner for WordPress. It reads the code of eve
 * **Fewer false alarms.** Many plugins carry old code that only runs on old PHP versions, behind a version check. Airworthy recognises those checks and marks that code as guarded instead of broken. In our test of the 30 most popular plugins at PHP 8.4, a basic scan flagged 8 as broken; Airworthy narrowed that to the 2 that contain code that really would fail on PHP 8.
 * **Maintenance signals from WordPress.org (if you allow it).** Plugins that were closed (removed from the directory), not updated in two years, not tested with recent WordPress versions, or that need a newer PHP version than you picked are called out.
 * **Know what to do first.** Under the overall answer, Airworthy lists the next steps that matter most for your site: update this plugin, replace that closed one, send the findings for your custom code to its developer. Results are grouped into fix before you upgrade, keep an eye on, and all good. Plugins with an update waiting say so, with a one-click update, and Airworthy checks them again once they're updated.
+* **A readiness score.** "86% ready for PHP 8.4": the share of your plugins and themes with no Blocker and nothing left unchecked, on the results, in Copy summary, on the dashboard and in WP-CLI. It is rounded down, so 100% means all of them.
+* **Check an update before you install it.** For a plugin or theme with an update waiting, "Check the update first" downloads that update from WordPress.org (only if you allowed WordPress.org lookups), runs the same checks on it without installing or running anything, and tells you whether updating fixes the problem, helps, changes nothing or makes it worse.
 * **Explanations in plain English.** Each finding says what changed in PHP, what happens on the new version (the page stops with a fatal error, or PHP only logs a notice for now) and how to fix it, with a short before-and-after code example for the common cases.
 * **Verdicts on the Plugins screen.** After a scan, each plugin's row on the Plugins screen shows its verdict, such as "PHP 8.4: Ready" or "PHP 8.4: Blocker", linking to its details. You see it every time you manage your plugins.
 * **Ready for PHP 8.6.** PHP 8.6 is due on 19 November 2026. Airworthy already checks for its deprecations with its own checks, and you can check against its release candidate today.
@@ -62,6 +64,8 @@ This plugin reads your plugin and theme files on your own server; it never runs 
 Airworthy only contacts an outside server if you allow it. Before your first scan it asks whether to also check WordPress.org, and remembers your answer; you can change it at every scan (in WP-CLI: `--wporg` or `--no-wporg`). If you say no, nothing leaves your server.
 
 If you say yes, it looks up each plugin's slug (its folder name) in the public WordPress.org plugin directory (api.wordpress.org), one plugin per request, to show whether it is still maintained. Nothing else is sent: not your site's address (the requests use their own "Airworthy" user agent instead of WordPress's default, which includes your site URL), not your PHP version. As with any web request, WordPress.org sees your server's IP address. Answers are cached for 24 hours.
+
+If you also press "Check the update first" on a plugin or theme that has an update waiting, Airworthy downloads that update's zip file from downloads.wordpress.org (the same file WordPress would install) into your server's temporary folder, reads it without running it, and deletes it afterwards. This only happens when you press the button and only if you allowed WordPress.org lookups; it is not sent anywhere else. Updates that come from other servers (many paid plugins) are never downloaded. The request names Airworthy, not your site's address, and, as with any web request, WordPress.org sees your server's IP address.
 
 Airworthy sets no cookies, adds nothing to your site's front end, and has no tracking, account or sign-up.
 
@@ -180,6 +184,10 @@ No. Every verdict, finding, explanation and export is free, on as many sites as 
 
 Yes. Airworthy is free and GPL-licensed, with no limit on sites and no account. Agencies often run it from WP-CLI (`wp airworthy scan --target=8.4 --fail-on=blocker`) across all their sites, and use Copy summary or the CSV export for each client.
 
+= Is there a paid version? =
+
+Yes, but only for extras. Airworthy Pro is a separate add-on, sold at https://airworthywp.com/pro/, that turns your results into an ordered upgrade plan that ticks itself off, shows every PHP version side by side, and makes branded reports you can send to clients. The check and its results stay free: nothing in this plugin is limited, locked or time-limited, and it needs no account or licence.
+
 = Does Airworthy protect my site from PHP security vulnerabilities, such as CVE-2026-109618 and CVE-2026-109619? =
 
 No. Airworthy doesn't patch PHP or block attacks; only a PHP update from your host does that. What it does is tell you whether your server's PHP has the latest PHP security fixes it knows of (currently the release of 21 October 2026, which fixed those two), on its start screen, in the results and in Tools > Site Health. A version number alone can't settle that: hosts on CloudLinux, cPanel, Plesk, Debian, Ubuntu or Red Hat ship the fixes as an update that keeps the old version number. So Airworthy also reads when your PHP was built. Built on or after the release day, it very likely has the fixes (Airworthy says so, and suggests confirming with your host). Built before, on one of those hosts, Airworthy asks you to get your host to apply the PHP update. Built before anywhere else, it's flagged as missing the fixes. When the build date can't be read, Airworthy says it can't tell from the version alone and to ask your host. The release data is bundled with the plugin, so Airworthy learns about a new PHP security release when it is itself updated.
@@ -200,6 +208,13 @@ Email security@airworthywp.com. Please don't post it in the public support forum
 8. The same check from WP-CLI, for agencies looking after many sites.
 
 == Changelog ==
+
+= 1.2.0 =
+* New: a readiness score. The results, Copy summary, the dashboard widget and `wp airworthy scan` now say how much of your site is ready, for example "86% ready for PHP 8.4" (plugins and themes with no Blocker and nothing unchecked, rounded down).
+* New: "Check the update first". For a plugin or theme with a WordPress.org update waiting, Airworthy downloads the update, runs its checks on it without installing or running it, and tells you whether updating fixes the problem. It needs WordPress.org lookups to be allowed, and the download is deleted when the check ends. Updates from other servers aren't downloaded.
+* New: a short, dismissible mention of Airworthy Pro, the paid add-on (monitoring with email alerts, an after-the-switch watch, client reports and more), on the results when something needs fixing, with a Pro item under Tools > Airworthy and a line in the dashboard widget. You can hide it with "Don't show again", or with the `airworthy_show_pro_promotions` filter. The free plugin keeps every feature it has.
+* New: for add-ons, two actions: `airworthy_scan_finished` and `airworthy_scan_failed` (documented in docs/EXTENDING.md).
+* PHP support dates and the PHP security release data checked against php.net on 27 November 2026: no change. PHP 8.6 is now released.
 
 = 1.1.3 =
 * Improved: the "Did Airworthy help?" request now appears at a good moment. When there's nothing left to fix, or a rescan has just cleared a Blocker, it sits near the top of the results and names the plugin you fixed. Otherwise it stays below the results. It is still asked once, and "Maybe later" asks again in 30 days.
@@ -245,6 +260,9 @@ Email security@airworthywp.com. Please don't post it in the public support forum
 * CSV export and WP-CLI commands.
 
 == Upgrade Notice ==
+
+= 1.2.0 =
+A readiness score, and "Check the update first": see whether a waiting update fixes a plugin's problems before you install it.
 
 = 1.1.3 =
 The review request now shows at a better moment, when your results are good or a rescan has fixed something.

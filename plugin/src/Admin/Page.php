@@ -82,6 +82,7 @@ final class Page {
 					'cronDisabled'   => defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON,
 					'resultsActions' => self::results_actions(),
 					'review'         => Review::config(),
+					'proCard'        => ProCard::config(),
 					'pluginUrl'      => 'https://wordpress.org/plugins/airworthy/',
 					// Airworthy Pro's full upgrade plan, when Pro adds it as a tab.
 					'planUrl'        => isset( self::extra_tabs()['plan'] ) ? add_query_arg( 'tab', 'plan', self::url() ) : '',
@@ -180,7 +181,7 @@ final class Page {
 	 * @param string $relative Asset path relative to the plugin folder.
 	 * @return string
 	 */
-	private static function asset_version( $relative ) {
+	public static function asset_version( $relative ) {
 		return AIRWORTHY_VERSION . '.' . (int) @filemtime( AIRWORTHY_DIR . $relative ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Missing file: version 0.
 	}
 

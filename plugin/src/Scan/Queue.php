@@ -688,18 +688,38 @@ final class Queue {
 		}
 
 		try {
-			$engine->set_serializable_interfaces( $state['serializable'] );
-			$issues = $engine->scan_file( $path );
+			$issues = self::file_issues( $engine, $state, $state['files'][ $index ], $path );
 		} catch ( \Throwable $e ) {
 			self::record_problem( $c, $state, $index, self::RULE_ENGINE, $e->getMessage(), 'files_failed' );
 			return;
 		}
-
-		$issues = self::normalise( $issues );
 		if ( isset( $issues['failed'] ) ) {
 			// PHP_CodeSniffer couldn't parse the file, so its results can't be trusted.
 			self::record_problem( $c, $state, $index, self::RULE_ENGINE, $issues['failed'], 'files_failed' );
 			return;
+		}
+		self::insert_issues( $c, $state['files'][ $index ], $issues );
+		++$state['counts']['files_done'];
+	}
+
+	/**
+	 * Scans one file and classifies what the engine found, adding to the component's counts.
+	 * Shared by the scan queue and by Preview (which scans a folder that isn't installed).
+	 *
+	 * @param Engine $engine   Engine.
+	 * @param array  $state    Component state: root, files, target, from, own, serializable, counts (by reference).
+	 * @param string $relative The file's path inside the component.
+	 * @param string $path     Absolute path.
+	 * @return array Classified findings, or array( 'failed' => reason ) when the file couldn't be parsed.
+	 * @throws \Throwable When the engine fails.
+	 */
+	public static function file_issues( Engine $engine, array &$state, $relative, $path ) {
+		$engine->set_serializable_interfaces( $state['serializable'] );
+		$issues = $engine->scan_file( $path );
+		$issues = self::normalise( $issues );
+		if ( isset( $issues['failed'] ) ) {
+			// PHP_CodeSniffer couldn't parse the file, so its results can't be trusted.
+			return array( 'failed' => $issues['failed'] );
 		}
 
 		$classifier = null;
@@ -710,7 +730,7 @@ final class Queue {
 			if ( ! $classifier ) {
 				$graph = LoadGraph::for_component( $state['root'], $state['files'], $state['target'], $state['own'] );
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local plugin file.
-				$classifier = new Classifier( (string) file_get_contents( $path ), $state['files'][ $index ], $state['target'], $state['own'], $graph );
+				$classifier = new Classifier( (string) file_get_contents( $path ), $relative, $state['target'], $state['own'], $graph );
 			}
 			$issues[ $k ]['context'] = $classifier->classify( $issue );
 			// A removal that already applies on the PHP version the site runs now isn't caused by
@@ -741,9 +761,9 @@ final class Queue {
 				++$state['counts']['errors'];
 			}
 		}
-		self::insert_issues( $c, $state['files'][ $index ], $issues );
-		++$state['counts']['files_done'];
+		return $issues;
 	}
+
 
 	/**
 	 * Tidies raw engine findings before they are classified and saved:
@@ -973,6 +993,12 @@ final class Queue {
 		);
 		Results::refresh_scan( $scan_id );
 		update_site_option( \Airworthy\Admin\Notice::OPTION, (int) $scan_id ); // "Scan finished" notice until the results are seen.
+		/**
+		 * Fires when a scan (or a re-check of some plugins in it) has finished and its results are in.
+		 *
+		 * @param int $scan_id Scan ID.
+		 */
+		do_action( 'airworthy_scan_finished', (int) $scan_id );
 	}
 
 	/**
@@ -997,6 +1023,14 @@ final class Queue {
 			$data['finished_at'] = self::now();
 		}
 		$wpdb->update( $t['scans'], $data, array( 'id' => $scan_id ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		if ( ! $retry ) {
+			/**
+			 * Fires when a scan has failed for good (it won't be retried).
+			 *
+			 * @param int $scan_id Scan ID.
+			 */
+			do_action( 'airworthy_scan_failed', (int) $scan_id );
+		}
 		return $retry;
 	}
 

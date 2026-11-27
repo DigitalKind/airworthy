@@ -509,7 +509,12 @@ final class Command {
 				++$counts[ $r['verdict'] ];
 			}
 		}
-		$summary = sprintf( 'PHP %1$s (scan %2$d, %3$s): %4$d blocker, %5$d unknown, %6$d suppressed, %7$d guarded, %8$d warnings, %9$d ready.', $scan->target_php, $scan->id, $scan->status, $counts['blocker'], $counts['unknown'], $counts['suppressed'], $counts['guarded'], $counts['warnings'], $counts['ready'] );
+		$summary   = sprintf( 'PHP %1$s (scan %2$d, %3$s): %4$d blocker, %5$d unknown, %6$d suppressed, %7$d guarded, %8$d warnings, %9$d ready.', $scan->target_php, $scan->id, $scan->status, $counts['blocker'], $counts['unknown'], $counts['suppressed'], $counts['guarded'], $counts['warnings'], $counts['ready'] );
+		$readiness = Verdict::readiness( $counts );
+		if ( null !== $readiness['percent'] && 'complete' === $scan->status ) {
+			/* translators: 1: percent, 2: number ready, 3: number of plugins and themes. */
+			$summary .= ' ' . sprintf( __( 'Readiness: %1$d%% (%2$d of %3$d plugins and themes).', 'airworthy' ), $readiness['percent'], $readiness['ready'], $readiness['total'] );
+		}
 
 		if ( 'summary' !== $format ) {
 			$fields = ! empty( $assoc_args['fields'] ) ? array_map( 'trim', explode( ',', (string) $assoc_args['fields'] ) ) : self::FIELDS;

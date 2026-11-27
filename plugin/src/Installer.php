@@ -199,17 +199,28 @@ final class Installer {
 			delete_site_option( $option );
 		}
 		\Airworthy\Admin\Review::forget_all(); // Each user's answer to the review request.
+		\Airworthy\Admin\ProCard::forget_all(); // Each user's answer to the Airworthy Pro card.
 
-		// Cached WordPress.org lookups. They're site transients, which live in the options table
-		// on a single site (as _site_transient_*) and in sitemeta on multisite. Plain transients
-		// are matched too, in case an older version stored any.
-		$patterns = array();
-		foreach ( array( '_site_transient_', '_site_transient_timeout_', '_transient_', '_transient_timeout_' ) as $prefix ) {
-			$patterns[] = $wpdb->esc_like( $prefix . self::TRANSIENT_PREFIX ) . '%';
+		// Cached WordPress.org lookups, and the update checks' jobs and results. They're (site)
+		// transients, which live in the options table on a single site (as _site_transient_*) and
+		// in sitemeta on multisite. Plain transients are matched too, in case an older version
+		// stored any.
+		foreach ( array( self::TRANSIENT_PREFIX, 'airworthy_uc_', 'airworthy_ucr_', 'airworthy_pv_' ) as $name ) {
+			$patterns = array();
+			foreach ( array( '_site_transient_', '_site_transient_timeout_', '_transient_', '_transient_timeout_' ) as $prefix ) {
+				$patterns[] = $wpdb->esc_like( $prefix . $name ) . '%';
+			}
+			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s', $wpdb->options, $patterns[0], $patterns[1], $patterns[2], $patterns[3] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			if ( is_multisite() ) {
+				$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE meta_key LIKE %s OR meta_key LIKE %s', $wpdb->sitemeta, $patterns[0], $patterns[1] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			}
 		}
-		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s', $wpdb->options, $patterns[0], $patterns[1], $patterns[2], $patterns[3] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		if ( is_multisite() ) {
-			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE meta_key LIKE %s OR meta_key LIKE %s', $wpdb->sitemeta, $patterns[0], $patterns[1] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+
+		// Folders an update check unpacked in the temp folder and never got to delete, and the
+		// job that would have removed them.
+		wp_unschedule_hook( \Airworthy\Scan\UpdateCheck::CLEANUP_HOOK );
+		foreach ( (array) glob( trailingslashit( get_temp_dir() ) . \Airworthy\Scan\UpdateCheck::TEMP_PREFIX . '*', GLOB_ONLYDIR ) as $dir ) {
+			\Airworthy\Scan\UpdateCheck::remove_folder( $dir );
 		}
 	}
 

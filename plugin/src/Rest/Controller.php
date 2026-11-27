@@ -220,6 +220,43 @@ final class Controller {
 		);
 		register_rest_route(
 			$ns,
+			'/updates/check',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'update_check' ),
+				'permission_callback' => $can,
+				'args'                => array(
+					'type' => array(
+						'required' => true,
+						'type'     => 'string',
+						'enum'     => array( 'plugin', 'theme' ),
+					),
+					'slug' => array(
+						'required'          => true,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
+			'/updates/check/continue',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'update_check_continue' ),
+				'permission_callback' => $can,
+				'args'                => array(
+					'job' => array(
+						'required'          => true,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_key',
+					),
+				),
+			)
+		);
+		register_rest_route(
+			$ns,
 			'/review',
 			array(
 				'methods'             => 'POST',
@@ -235,6 +272,43 @@ final class Controller {
 				),
 			)
 		);
+		register_rest_route(
+			$ns,
+			'/pro-card',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( \Airworthy\Admin\ProCard::class, 'rest_answer' ),
+				'permission_callback' => $can,
+				'args'                => array(
+					'choice' => array(
+						'required'    => true,
+						'type'        => 'string',
+						'enum'        => \Airworthy\Admin\ProCard::CHOICES,
+						'description' => __( 'The user\'s answer to the Airworthy Pro card: later or never.', 'airworthy' ),
+					),
+				),
+			)
+		);
+	}
+
+	/**
+	 * POST /updates/check: looks inside a waiting update (starts the check, or takes its next step).
+	 *
+	 * @param \WP_REST_Request $request Request.
+	 * @return \WP_REST_Response
+	 */
+	public static function update_check( $request ) {
+		return rest_ensure_response( \Airworthy\Scan\UpdateCheck::run( (string) $request['type'], (string) $request['slug'] ) );
+	}
+
+	/**
+	 * POST /updates/check/continue: the next step of a check job started elsewhere (a zip).
+	 *
+	 * @param \WP_REST_Request $request Request.
+	 * @return \WP_REST_Response
+	 */
+	public static function update_check_continue( $request ) {
+		return rest_ensure_response( \Airworthy\Scan\UpdateCheck::advance( (string) $request['job'] ) );
 	}
 
 	/**
@@ -568,6 +642,7 @@ final class Controller {
 			'settings_url' => add_query_arg( 'tab', 'settings', \Airworthy\Admin\Page::url() ),
 			'updates_url'  => current_user_can( 'update_plugins' ) ? self_admin_url( 'update-core.php' ) : null,
 			'counts'       => $counts,
+			'readiness'    => Verdict::readiness( $counts ),
 			'wporg'        => $s->wporg_status ? $s->wporg_status : null, // pending | done | partial | offline | off (no consent).
 			'export_url'   => \Airworthy\Admin\Export::url( (int) $s->id ),
 			'created_at'   => self::iso( $s->created_at ),

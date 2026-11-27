@@ -263,11 +263,11 @@ final class SiteHealth {
 	 *
 	 * @return object|null
 	 */
-	private static function latest_scan() {
+	public static function latest_scan() {
 		global $wpdb;
 		$t = Installer::tables();
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Own table, no user input.
-		$scan = $wpdb->get_row( $wpdb->prepare( "SELECT target_php, count_blocker, count_unknown, finished_at FROM %i WHERE status = 'complete' AND finished_at IS NOT NULL ORDER BY id DESC LIMIT 1", $t['scans'] ) );
+		$scan = $wpdb->get_row( $wpdb->prepare( "SELECT target_php, count_blocker, count_unknown, count_suppressed, count_guarded, count_warnings, count_ready, finished_at FROM %i WHERE status = 'complete' AND finished_at IS NOT NULL ORDER BY id DESC LIMIT 1", $t['scans'] ) );
 		return $scan ? $scan : null;
 	}
 

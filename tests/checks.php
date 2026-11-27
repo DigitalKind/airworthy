@@ -42,6 +42,10 @@ $check( 'Unknown targets are refused', ! Targets::is_valid( '9.0' ) && ! Targets
 $check( 'Support table checked within the last 13 months', ( time() - $day( Targets::TABLE_CHECKED ) ) < 395 * DAY_IN_SECONDS, 'Update Targets::SECURITY_UNTIL (docs/RELEASE.md)' );
 
 // --- Verdict order.
+$check( 'Readiness: no Blocker and nothing unchecked is 100%', 100 === Verdict::readiness( array( 'ready' => 40, 'warnings' => 6, 'guarded' => 2, 'suppressed' => 2 ) )['percent'] );
+$check( 'Readiness: Blockers and Unknown count against it, the rest count for it', array( 'percent' => 92, 'ready' => 46, 'total' => 50 ) === Verdict::readiness( array( 'blocker' => 3, 'unknown' => 1, 'warnings' => 6, 'ready' => 40 ) ) );
+$check( 'Readiness: rounded down, so 100% always means all of them', 99 === Verdict::readiness( array( 'blocker' => 1, 'ready' => 199 ) )['percent'] && 0 === Verdict::readiness( array( 'blocker' => 5 ) )['percent'] );
+$check( 'Readiness: nothing scanned gives no score', null === Verdict::readiness( array() )['percent'] );
 $check( 'Verdict: plain error is Blocker', Verdict::BLOCKER === Verdict::from_counts( array( 'errors' => 1, 'files_failed' => 1 ) ) );
 $check( 'Verdict: Requires PHP too high is Blocker', Verdict::BLOCKER === Verdict::from_counts( array( 'requires_php_too_high' => 1 ) ) );
 $check( 'Verdict: unreadable file is Unknown', Verdict::UNKNOWN === Verdict::from_counts( array( 'files_skipped' => 1, 'suppressed' => 2 ) ) );
@@ -152,6 +156,7 @@ $routes = array(
 	array( 'GET', '/estimate' ),
 	array( 'GET', "/scans/$scan_id/unchecked" ),
 	array( 'POST', '/review', array( 'choice' => 'later' ) ),
+	array( 'POST', '/pro-card', array( 'choice' => 'later' ) ),
 );
 
 $editor_id = username_exists( 'airworthy_test_editor' );
@@ -199,6 +204,10 @@ if ( is_multisite() ) {
 wp_set_current_user( $admin_id );
 list( $status, $data ) = $call( 'GET', "/scans/$scan_id" );
 $check( 'REST: administrators can read results', 200 === $status, (string) $status );
+$sum = array_sum( $data['counts'] );
+$check( 'REST: a scan carries its readiness score, matching its counts', isset( $data['readiness'] ) && $data['readiness'] === Verdict::readiness( $data['counts'] ) && $data['readiness']['total'] === $sum, wp_json_encode( $data['readiness'] ?? null ) );
+$widget_line = \Airworthy\Admin\DashboardWidget::score_line();
+$check( 'Dashboard widget: shows the score line from the latest finished scan', '' !== $widget_line && false !== strpos( $widget_line, '%' ) );
 list( $status, $data ) = $call( 'GET', "/scans/$scan_id/components/$comp_id/issues" );
 $paths = wp_json_encode( $data );
 $check( 'REST: findings list relative paths only', 200 === $status && false === strpos( $paths, WP_CONTENT_DIR ) && false === strpos( $paths, ABSPATH ), substr( $paths, 0, 200 ) );
@@ -217,6 +226,83 @@ $check( 'Review: Don\'t ask again ends it', 200 === $status && ! $review::should
 list( $status ) = $call( 'POST', '/review', array( 'choice' => 'five-stars' ) );
 $check( 'Review: unknown answers are refused', 400 === $status, (string) $status );
 delete_user_meta( $admin_id, $review::META );
+
+// The Airworthy Pro card: shown once per user when Pro isn't installed; Not now waits 60 days,
+// Don't show again ends it; sites can hide it with a filter.
+$procard = \Airworthy\Admin\ProCard::class;
+delete_user_meta( $admin_id, $procard::META );
+// Where Airworthy Pro is active (the local test site) the card must stay hidden; CI has no Pro.
+$shown = ! $procard::pro_active();
+$check( 'Pro card: shown when the user has not answered, hidden when Airworthy Pro is active', $shown === $procard::should_show() && ( $shown ? is_array( $procard::config() ) : null === $procard::config() ) );
+$check( 'Pro card: the link carries a utm placement', false !== strpos( $procard::URL, 'utm_campaign=pro-card' ) && 0 === strpos( $procard::URL, 'https://airworthywp.com/' ) );
+list( $status ) = $call( 'POST', '/pro-card', array( 'choice' => 'later' ) );
+$later          = (int) get_user_meta( $admin_id, $procard::META, true );
+$check( 'Pro card: Not now waits about 60 days', 200 === $status && ! $procard::should_show() && abs( $later - ( time() + 60 * DAY_IN_SECONDS ) ) < 60, "$status $later" );
+update_user_meta( $admin_id, $procard::META, (string) ( time() - 1 ) );
+$check( 'Pro card: shown again once the 60 days are up (still hidden when Pro is active)', $shown === $procard::should_show() );
+list( $status ) = $call( 'POST', '/pro-card', array( 'choice' => 'never' ) );
+$check( 'Pro card: Don\'t show again ends it', 200 === $status && ! $procard::should_show() && null === $procard::config() );
+list( $status ) = $call( 'POST', '/pro-card', array( 'choice' => 'buy-now' ) );
+$check( 'Pro card: unknown answers are refused', 400 === $status, (string) $status );
+delete_user_meta( $admin_id, $procard::META );
+add_filter( 'airworthy_show_pro_promotions', '__return_false' );
+$check( 'Pro card: the airworthy_show_pro_promotions filter hides it', ! $procard::should_show() && null === $procard::config() );
+remove_filter( 'airworthy_show_pro_promotions', '__return_false' );
+$check( 'Pro card: back after the filter is removed (unless Pro is active)', $shown === $procard::should_show() );
+delete_user_meta( $admin_id, $procard::META );
+
+// The Tools menu item: shown to users who can scan unless Pro is active, a site turned it off,
+// or the user chose Don't show again; Not now keeps it (it is quiet).
+$check( 'Pro menu item: visible when Pro is not active', $shown === $procard::menu_visible() );
+$check( 'Pro menu item: links to the Pro page with its own utm placement', 0 === strpos( $procard::MENU_URL, 'https://airworthywp.com/pro/' ) && false !== strpos( $procard::MENU_URL, 'utm_campaign=pro-menu' ) );
+$call( 'POST', '/pro-card', array( 'choice' => 'later' ) );
+$check( 'Pro menu item: Not now keeps it', $shown === $procard::menu_visible() );
+$call( 'POST', '/pro-card', array( 'choice' => 'never' ) );
+$check( 'Pro menu item: Don\'t show again hides it', ! $procard::menu_visible() );
+delete_user_meta( $admin_id, $procard::META );
+add_filter( 'airworthy_show_pro_promotions', '__return_false' );
+$check( 'Pro menu item: the filter hides it', ! $procard::menu_visible() );
+remove_filter( 'airworthy_show_pro_promotions', '__return_false' );
+// The entry is added to the menu array as an external address, after Airworthy.
+global $submenu;
+$saved_submenu = isset( $submenu['tools.php'] ) ? $submenu['tools.php'] : null;
+$submenu['tools.php'] = array( array( 'Import', 'import', 'import.php' ), array( 'Airworthy', 'manage_options', 'airworthy' ), array( 'Plugin Check', 'manage_options', 'plugin-check' ) );
+if ( ! is_multisite() ) {
+	$procard::add_menu();
+	$items = array_values( $submenu['tools.php'] );
+	$check( 'Pro menu item: added right after Airworthy as an external link (nothing added when Pro is active)', $shown ? ( 4 === count( $items ) && 'airworthy' === $items[1][2] && $procard::MENU_URL === $items[2][2] && 'Airworthy Pro' === $items[2][0] && 'plugin-check' === $items[3][2] ) : 3 === count( $items ) );
+}
+if ( null === $saved_submenu ) {
+	unset( $submenu['tools.php'] );
+} else {
+	$submenu['tools.php'] = $saved_submenu;
+}
+
+// The dashboard widget: for users who can scan, the same plain-English status as Site Health,
+// and one dismissible Pro line when the latest scan has Blockers (never when Pro is active).
+$widget = \Airworthy\Admin\DashboardWidget::class;
+delete_user_meta( $admin_id, $procard::META );
+$check( 'Dashboard widget: on for a user who can scan', $widget::enabled() );
+wp_set_current_user( $editor_id );
+$check( 'Dashboard widget: off for an editor', ! $widget::enabled() && ! $widget::pro_line_visible() );
+wp_set_current_user( $admin_id );
+add_filter( 'airworthy_dashboard_widget', '__return_false' );
+$check( 'Dashboard widget: the airworthy_dashboard_widget filter removes it', ! $widget::enabled() );
+remove_filter( 'airworthy_dashboard_widget', '__return_false' );
+ob_start();
+$widget::render();
+$html = (string) ob_get_clean();
+$check( 'Dashboard widget: shows the status with a link to the Airworthy screen', false !== strpos( $html, 'airworthy-widget' ) && false !== strpos( $html, esc_url( \Airworthy\Admin\Page::url() ) ), substr( $html, 0, 200 ) );
+$latest = \Airworthy\Admin\SiteHealth::latest_scan();
+$expect = $shown && $latest && (int) $latest->count_blocker > 0 && version_compare( $latest->target_php, \Airworthy\Targets::minor( \Airworthy\Env::php_version() ), '>' );
+$check( 'Dashboard widget: the Pro line shows only for Blockers, with Pro not active', $expect === $widget::pro_line_visible() && $expect === ( false !== strpos( $html, 'airworthy-widget-hide' ) ) );
+$check( 'Dashboard widget: the Pro line links with its own utm placement', 0 === strpos( $widget::PRO_URL, 'https://airworthywp.com/pro/' ) && false !== strpos( $widget::PRO_URL, 'utm_campaign=pro-widget' ) );
+$call( 'POST', '/pro-card', array( 'choice' => 'never' ) );
+$check( 'Dashboard widget: Don\'t show again removes the Pro line', ! $widget::pro_line_visible() );
+delete_user_meta( $admin_id, $procard::META );
+add_filter( 'airworthy_show_pro_promotions', '__return_false' );
+$check( 'Dashboard widget: the promotions filter removes the Pro line', ! $widget::pro_line_visible() );
+remove_filter( 'airworthy_show_pro_promotions', '__return_false' );
 
 // The findings list and its filters, against counts taken straight from the table.
 $in_table = static function ( $where ) use ( $wpdb, $t, $scan_id, $comp_id ) {
@@ -381,6 +467,149 @@ $ph = \Airworthy\Admin\SiteHealth::run_patch( '8.3.35', $rel, $b_unknown );
 $check( 'Site Health: an unreadable build date is recommended, never critical', 'recommended' === $ph['status'] && false !== strpos( $ph['label'], 'can\'t tell' ), $ph['label'] );
 $ph = \Airworthy\Admin\SiteHealth::run_patch( '8.1.33', $rel, $b_unknown );
 $check( 'Site Health: a version that gets no fix is critical when the release is', 'critical' === $ph['status'] && false !== strpos( $ph['label'], 'no longer gets' ), $ph['label'] );
+
+// "Does updating fix it?": looking inside a waiting update before it is installed.
+$uc     = \Airworthy\Scan\UpdateCheck::class;
+$latest = $uc::latest_scan();
+$check( 'Update check: only https zips from downloads.wordpress.org are fetched', $uc::allowed_package( 'https://downloads.wordpress.org/plugin/foo.1.2.zip' ) && $uc::allowed_package( 'https://downloads.wordpress.org/theme/twentytwentyfive.1.0.zip' ) && ! $uc::allowed_package( 'http://downloads.wordpress.org/plugin/foo.zip' ) && ! $uc::allowed_package( 'https://example.com/plugin/foo.zip' ) && ! $uc::allowed_package( 'https://downloads.wordpress.org.evil.example/plugin/foo.zip' ) && ! $uc::allowed_package( 'https://downloads.wordpress.org/other/foo.zip' ) && ! $uc::allowed_package( '' ) );
+$set_updates = static function ( $package ) {
+	set_site_transient( 'update_plugins', (object) array( 'last_checked' => time(), 'response' => array( 'fx-implode/fx-implode.php' => (object) array( 'slug' => 'fx-implode', 'new_version' => '9.9.9', 'package' => $package ) ), 'no_update' => array() ) );
+};
+$set_updates( 'https://downloads.wordpress.org/plugin/fx-implode.9.9.9.zip' );
+$all = \Airworthy\Scan\Updates::all();
+$check( 'Update check: an update from WordPress.org is marked checkable', ! empty( $all['plugin|fx-implode']['checkable'] ), wp_json_encode( $all['plugin|fx-implode'] ?? null ) );
+$set_updates( 'https://vendor.example.com/fx-implode.zip' );
+$all = \Airworthy\Scan\Updates::all();
+$check( 'Update check: an update from anywhere else is not', isset( $all['plugin|fx-implode'] ) && false === $all['plugin|fx-implode']['checkable'] );
+$r = $uc::run( 'plugin', 'fx-implode' );
+$check( 'Update check: an update from another server is not looked inside', 'problem' === $r['status'] && 'unavailable' === $r['code'], wp_json_encode( $r ) );
+$r = $uc::run( 'plugin', 'no-such-plugin' );
+$check( 'Update check: no update waiting says so', 'problem' === $r['status'] && 'no_update' === $r['code'] );
+$set_updates( 'https://downloads.wordpress.org/plugin/fx-implode.9.9.9.zip' );
+$consent_was = get_site_option( 'airworthy_wporg_consent', null );
+update_site_option( 'airworthy_wporg_consent', 'no' );
+$r = $uc::run( 'plugin', 'fx-implode' );
+$check( 'Update check: nothing is downloaded without WordPress.org consent', 'problem' === $r['status'] && 'needs_consent' === $r['code'], wp_json_encode( $r ) );
+if ( null === $consent_was ) {
+	delete_site_option( 'airworthy_wporg_consent' );
+} else {
+	update_site_option( 'airworthy_wporg_consent', $consent_was );
+}
+list( $status, $data ) = $call( 'POST', '/updates/check', array( 'type' => 'plugin', 'slug' => 'no-such-plugin' ) );
+$check( 'Update check: REST answers an administrator', 200 === $status && 'problem' === $data['status'], (string) $status );
+wp_set_current_user( $editor_id );
+list( $status ) = $call( 'POST', '/updates/check', array( 'type' => 'plugin', 'slug' => 'fx-implode' ) );
+$check( 'Update check: REST is closed to users who cannot scan', in_array( $status, array( 401, 403 ), true ), (string) $status );
+wp_set_current_user( $admin_id );
+
+if ( class_exists( 'ZipArchive' ) ) {
+	// Its own finished scan, so these checks do not depend on what the earlier steps left behind.
+	$now = gmdate( 'Y-m-d H:i:s' );
+	$wpdb->insert( $t['scans'], array( 'target_php' => '8.4', 'from_php' => '', 'status' => 'complete', 'created_at' => $now, 'finished_at' => $now ) ); // phpcs:ignore
+	$fake_scan = (int) $wpdb->insert_id;
+	foreach ( array( 'fx-implode' => array( 'blocker', 1 ), 'fx-ready' => array( 'ready', 0 ) ) as $fake_slug => $fake ) {
+		$wpdb->insert( $t['components'], array( 'scan_id' => $fake_scan, 'type' => 'plugin', 'slug' => $fake_slug, 'name' => $fake_slug, 'version' => '1.0', 'rel_path' => "$fake_slug/$fake_slug.php", 'status' => 'done', 'verdict' => $fake[0], 'errors' => $fake[1] ) ); // phpcs:ignore
+	}
+	$latest = $uc::latest_scan();
+	$check( 'Update check: the latest finished scan is the one the check compares with', (int) $latest->id === $fake_scan );
+	// The download names Airworthy, not the site: WordPress's default user agent contains the site's address.
+	$seen_agent = null;
+	$spy        = static function ( $pre, $args, $url ) use ( &$seen_agent ) {
+		if ( 0 === strpos( $url, 'https://downloads.wordpress.org/' ) ) {
+			$seen_agent = $args['user-agent'];
+			return new WP_Error( 'test', 'stopped by the test' );
+		}
+		return $pre;
+	};
+	update_site_option( 'airworthy_wporg_consent', 'yes' );
+	$set_updates( 'https://downloads.wordpress.org/plugin/fx-implode.9.9.9.zip' );
+	add_filter( 'pre_http_request', $spy, 10, 3 );
+	$uc::run( 'plugin', 'fx-implode' );
+	remove_filter( 'pre_http_request', $spy, 10 );
+	$check( 'Update check: the download is made as "Airworthy", without the site address', is_string( $seen_agent ) && 0 === strpos( $seen_agent, 'Airworthy/' ) && false === stripos( $seen_agent, (string) wp_parse_url( home_url(), PHP_URL_HOST ) ), (string) $seen_agent );
+	if ( null === $consent_was ) {
+		delete_site_option( 'airworthy_wporg_consent' );
+	} else {
+		update_site_option( 'airworthy_wporg_consent', $consent_was );
+	}
+	delete_transient( 'airworthy_uc_' . md5( 'plugin|fx-implode|9.9.9|8.4|' . $fake_scan ) );
+
+	$make_zip = static function ( array $files ) {
+		$path = wp_tempnam( 'aw-test-zip' );
+		$za   = new ZipArchive();
+		$za->open( $path, ZipArchive::OVERWRITE );
+		foreach ( $files as $name => $code ) {
+			$za->addFromString( $name, $code );
+		}
+		$za->close();
+		return $path;
+	};
+	$run_job  = static function ( $zip, array $meta ) use ( $uc, $latest ) {
+		$job = $uc::from_zip( $zip, (string) $latest->target_php, (string) $latest->from_php, $meta );
+		if ( is_wp_error( $job ) ) {
+			return $job;
+		}
+		$r = array();
+		for ( $i = 0; $i < 80; $i++ ) {
+			$r = $uc::advance( $job );
+			if ( 'running' !== $r['status'] ) {
+				break;
+			}
+		}
+		return $r;
+	};
+	$fixed_code = "<?php\n/**\n * Plugin Name: FX Implode\n */\nfunction fx_implode_cell( \$values ) {\n\treturn '<td>' . implode( ', ', (array) \$values ) . '</td>';\n}\n";
+	$broken     = "<?php\n/**\n * Plugin Name: FX Implode\n */\nfunction fx_implode_cell( \$values ) {\n\treturn '<td>' . implode( (array) \$values, ', ' ) . '</td>';\n}\n";
+	$scans_before = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$t['scans']}" ); // phpcs:ignore
+	$comps_before = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$t['components']}" ); // phpcs:ignore
+	$meta         = array( 'type' => 'plugin', 'slug' => 'fx-implode', 'version' => '9.9.9' );
+
+	$zip = $make_zip( array( 'fx-implode/fx-implode.php' => $fixed_code ) );
+	$r   = $run_job( $zip, $meta );
+	wp_delete_file( $zip );
+	$check( 'Update check: a fixed update says it fixes the Blocker', is_array( $r ) && 'done' === $r['status'] && 'fixes' === $r['outcome'] && 'blocker' === $r['before']['verdict'] && 'ready' === $r['after']['verdict'], wp_json_encode( $r ) );
+	$check( 'Update check: the answer is a sentence naming the version and PHP version', is_array( $r ) && false !== strpos( $r['message'], '9.9.9' ) && false !== strpos( $r['message'], (string) $latest->target_php ), wp_json_encode( $r['message'] ?? null ) );
+
+	$zip = $make_zip( array( 'fx-implode/fx-implode.php' => $broken ) );
+	$r   = $run_job( $zip, $meta );
+	wp_delete_file( $zip );
+	$check( 'Update check: an update that is still broken says nothing changes, and shows where', is_array( $r ) && 'done' === $r['status'] && 'same' === $r['outcome'] && ! empty( $r['samples'] ) && 'fx-implode.php' === $r['samples'][0]['file'], wp_json_encode( $r ) );
+
+	$zip = $make_zip( array( 'fx-ready/fx-ready.php' => $broken ) );
+	$r   = $run_job( $zip, array( 'type' => 'plugin', 'slug' => 'fx-ready', 'version' => '2.0' ) );
+	wp_delete_file( $zip );
+	$check( 'Update check: an update that would break a working plugin is called worse', is_array( $r ) && 'done' === $r['status'] && 'worse' === $r['outcome'] && false !== strpos( $r['message'], 'Careful' ), wp_json_encode( $r ) );
+
+	$zip = $make_zip( array( 'brand-new/brand-new.php' => $fixed_code ) );
+	$r   = $run_job( $zip, array() );
+	wp_delete_file( $zip );
+	$check( 'Update check: a zip with no installed counterpart is judged on its own', is_array( $r ) && 'done' === $r['status'] && 'ok' === $r['outcome'] && null === $r['before'], wp_json_encode( $r ) );
+
+	$zip = $make_zip( array( '../evil.php' => '<?php // x' ) );
+	$r   = $uc::from_zip( $zip, (string) $latest->target_php, '', array() );
+	wp_delete_file( $zip );
+	$check( 'Update check: a zip with a path that climbs out is refused', is_wp_error( $r ) );
+	$notzip = wp_tempnam( 'aw-test-notzip' );
+	file_put_contents( $notzip, 'not a zip' ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+	$r = $uc::from_zip( $notzip, (string) $latest->target_php, '', array() );
+	wp_delete_file( $notzip );
+	$check( 'Update check: a file that is not a zip is refused', is_wp_error( $r ) );
+
+	$check( 'Update check: nothing was saved to the scan tables', $scans_before === (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$t['scans']}" ) && $comps_before === (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$t['components']}" ) ); // phpcs:ignore
+	$left = glob( trailingslashit( get_temp_dir() ) . $uc::TEMP_PREFIX . '*' );
+	$check( 'Update check: the unpacked folders are deleted when the check ends', empty( $left ), wp_json_encode( $left ) );
+	wp_clear_scheduled_hook( $uc::CLEANUP_HOOK );
+
+	$out = $uc::outcome( array( 'verdict' => 'blocker', 'errors' => 12, 'warnings' => 0 ), array( 'verdict' => 'blocker', 'errors' => 3, 'warnings' => 0, 'unchecked' => 0 ) );
+	$check( 'Update check: fewer problems but still a Blocker is "better"', 'better' === $out );
+	$unchecked = $uc::result( array( 'meta' => array(), 'target' => '8.4', 'counts' => array( 'errors' => 0, 'guarded' => 0, 'suppressed' => 0, 'warnings' => 0, 'files_failed' => 2, 'files_skipped' => 0 ), 'samples' => array() ) );
+	$check( 'Update check: files that could not be checked make the answer "unknown", not "ok"', 'unknown' === $unchecked['outcome'] && 2 === $unchecked['after']['unchecked'] && false !== strpos( $unchecked['message'], 'could not be checked' ), wp_json_encode( $unchecked['message'] ) );
+	$wpdb->delete( $t['components'], array( 'scan_id' => $fake_scan ) ); // phpcs:ignore
+	$wpdb->delete( $t['scans'], array( 'id' => $fake_scan ) ); // phpcs:ignore
+} else {
+	echo "SKIP  no ZipArchive: zip checks not run\n";
+}
+delete_site_transient( 'update_plugins' );
 
 wp_delete_user( (int) $editor_id );
 if ( isset( $site_admin ) ) {

@@ -27,6 +27,7 @@ final class Plugin {
 		// when a job actually runs. Must match Scan\Queue::HOOK.
 		add_action( 'airworthy_scan_batch', array( Scan\Queue::class, 'run_batch' ) );
 		add_action( 'airworthy_wporg_batch', array( Wporg\Fetcher::class, 'run' ) );
+		add_action( 'airworthy_uc_cleanup', array( Scan\UpdateCheck::class, 'remove_folder' ) ); // Must match Scan\UpdateCheck::CLEANUP_HOOK.
 
 		// REST routes: the controller only loads on REST requests.
 		add_action( 'rest_api_init', array( Rest\Controller::class, 'register_routes' ) );
@@ -45,6 +46,8 @@ final class Plugin {
 		if ( is_admin() ) {
 			( new Admin\Page() )->register();
 			Admin\Notice::register();
+			Admin\ProCard::register();
+			Admin\DashboardWidget::register();
 			Admin\PluginsScreen::register();
 			Admin\Export::register();
 			Settings::register();

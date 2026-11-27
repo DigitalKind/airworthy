@@ -29,10 +29,14 @@ if ( $as_table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $as_ta
 		$left[] = "$jobs pending scheduled jobs";
 	}
 }
-foreach ( array( 'airworthy_scan_batch', 'airworthy_wporg_batch' ) as $hook ) {
+foreach ( array( 'airworthy_scan_batch', 'airworthy_wporg_batch', 'airworthy_uc_cleanup' ) as $hook ) {
 	if ( wp_next_scheduled( $hook ) ) {
 		$left[] = "cron event $hook";
 	}
+}
+
+foreach ( (array) glob( trailingslashit( get_temp_dir() ) . 'airworthy-uc-*' ) as $dir ) {
+	$left[] = "temp folder $dir";
 }
 
 if ( $left ) {

@@ -34,7 +34,7 @@ final class Targets {
 		'8.3' => '2027-12-31',
 		'8.4' => '2028-12-31',
 		'8.5' => '2029-12-31',
-		'8.6' => '2030-12-31', // From PHP's release policy (two years of bug fixes, two of security fixes, to 31 December); confirm on php.net after the release.
+		'8.6' => '2030-12-31', // PHP 8.6 came out on 19 November 2026; php.net's supported-versions page (checked 27 November 2026) shows security support until 31 December 2030.
 	);
 
 	/**
@@ -46,7 +46,7 @@ final class Targets {
 	);
 
 	/** When SECURITY_UNTIL was last checked against php.net. */
-	const TABLE_CHECKED = '2026-11-11';
+	const TABLE_CHECKED = '2026-11-27';
 
 	/**
 	 * The latest PHP security release Airworthy knows about (from php.net's release notes),

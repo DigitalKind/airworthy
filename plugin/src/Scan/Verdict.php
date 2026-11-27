@@ -34,6 +34,27 @@ final class Verdict {
 	const ALL = array( self::BLOCKER, self::UNKNOWN, self::SUPPRESSED, self::GUARDED, self::WARNINGS, self::READY );
 
 	/**
+	 * How much of the site is ready: the plugins and themes with no Blocker and nothing left
+	 * unchecked, as a share of all of them. Rounded down, so 100% means all of them.
+	 *
+	 * @param array $counts Number of plugins and themes per verdict (blocker, unknown, ...).
+	 * @return array{percent:?int,ready:int,total:int} percent is null when nothing was scanned.
+	 */
+	public static function readiness( array $counts ) {
+		$total = 0;
+		foreach ( self::ALL as $verdict ) {
+			$total += isset( $counts[ $verdict ] ) ? max( 0, (int) $counts[ $verdict ] ) : 0;
+		}
+		$not_ready = ( isset( $counts[ self::BLOCKER ] ) ? max( 0, (int) $counts[ self::BLOCKER ] ) : 0 ) + ( isset( $counts[ self::UNKNOWN ] ) ? max( 0, (int) $counts[ self::UNKNOWN ] ) : 0 );
+		$ready     = max( 0, $total - $not_ready );
+		return array(
+			'percent' => $total ? (int) floor( 100 * $ready / $total ) : null,
+			'ready'   => $ready,
+			'total'   => $total,
+		);
+	}
+
+	/**
 	 * Works out a verdict.
 	 *
 	 * @param array $counts errors (plain), suppressed, guarded, warnings, files_failed, files_skipped,

@@ -870,6 +870,45 @@
 	color: #fff;
 }
 
+.airworthy-headline-body {
+	flex: 1;
+	min-width: 0;
+}
+
+/* The readiness score: "92% ready for PHP 8.4". */
+.airworthy-score {
+	flex: none;
+	margin-left: auto;
+	padding: 0 4px 0 18px;
+	border-left: 1px solid rgba(0, 0, 0, 0.1);
+	text-align: center;
+}
+
+.airworthy-score strong {
+	font-size: 28px;
+	line-height: 1.1;
+}
+
+.airworthy-score span {
+	display: block;
+	font-size: 12px;
+	color: #3c434a;
+}
+
+@media (max-width: 600px) {
+	.airworthy-headline {
+		flex-wrap: wrap;
+	}
+
+	.airworthy-score {
+		flex-basis: 100%;
+		padding: 8px 0 0;
+		border-left: 0;
+		border-top: 1px solid rgba(0, 0, 0, 0.1);
+		text-align: left;
+	}
+}
+
 .airworthy-headline-good { background: #edfaef; border-color: #a7e3b5; }
 .airworthy-headline-good strong { color: #005c12; }
 .airworthy-headline-good .airworthy-headline-icon { background: #00a32a; }
@@ -1352,4 +1391,24 @@
 
 .airworthy-first-steps p {
 	margin: 4px 0 0;
+}
+
+/* "Check the update first". */
+.airworthy-update-check-box {
+	display: inline;
+}
+
+.airworthy-update-result {
+	margin-left: 8px;
+	font-size: 13px;
+}
+
+.airworthy-update-result.is-good { color: #005c12; }
+.airworthy-update-result.is-bad { color: #8a2424; }
+.airworthy-update-result.is-busy { color: #50575e; }
+
+.airworthy-update-samples {
+	margin: 6px 0 0 18px;
+	font-size: 12px;
+	list-style: disc;
 }

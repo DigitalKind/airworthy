@@ -20,7 +20,7 @@ final class Updates {
 	/**
 	 * Updates waiting, keyed "type|slug".
 	 *
-	 * @return array<string,array{version:string,url:?string}> url: the one-click update link,
+	 * @return array<string,array{version:string,url:?string,checkable:bool}> url: the one-click update link,
 	 *         or null when the current user can't update.
 	 */
 	public static function all() {
@@ -42,8 +42,9 @@ final class Updates {
 			}
 			$slug                     = false === strpos( $file, '/' ) ? basename( $file, '.php' ) : dirname( $file );
 			$out[ 'plugin|' . $slug ] = array(
-				'version' => $new,
-				'url'     => $can ? wp_nonce_url( self_admin_url( 'update.php?action=upgrade-plugin&plugin=' . rawurlencode( $file ) ), 'upgrade-plugin_' . $file ) : null,
+				'version'   => $new,
+				'url'       => $can ? wp_nonce_url( self_admin_url( 'update.php?action=upgrade-plugin&plugin=' . rawurlencode( $file ) ), 'upgrade-plugin_' . $file ) : null,
+				'checkable' => UpdateCheck::allowed_package( isset( $entry->package ) ? (string) $entry->package : '' ), // Airworthy can look inside it first.
 			);
 		}
 
@@ -57,8 +58,9 @@ final class Updates {
 					continue;
 				}
 				$out[ 'theme|' . $stylesheet ] = array(
-					'version' => $new,
-					'url'     => $can ? wp_nonce_url( self_admin_url( 'update.php?action=upgrade-theme&theme=' . rawurlencode( $stylesheet ) ), 'upgrade-theme_' . $stylesheet ) : null,
+					'version'   => $new,
+					'url'       => $can ? wp_nonce_url( self_admin_url( 'update.php?action=upgrade-theme&theme=' . rawurlencode( $stylesheet ) ), 'upgrade-theme_' . $stylesheet ) : null,
+					'checkable' => UpdateCheck::allowed_package( isset( $update['package'] ) ? (string) $update['package'] : '' ),
 				);
 			}
 		}
